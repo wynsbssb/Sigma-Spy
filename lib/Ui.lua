@@ -45,7 +45,8 @@ type Log = {
 	ReturnValues: table?,
 	RemoteData: table?,
 	Id: string,
-	Selectable: any?
+	Selectable: table,
+	HeaderData: table
 }
 
 --// Compatibility
@@ -375,6 +376,15 @@ function Ui:MakeOptionsTab(InfoSelector)
 			{
 				Text = "Clear logs",
 				Callback = function()
+					local Tab = ActiveData and ActiveData.Tab or nil
+
+					--// Remove the Remote tab
+					if Tab then
+						InfoSelector:RemoveTab(Tab)
+					end
+
+					--// Clear all log elements
+					ActiveData = nil
 					self:ClearLogs()
 				end,
 			},
@@ -520,11 +530,12 @@ function Ui:SetFocusedRemote(Data)
 	--// Remote previous remote tab
 	if ActiveData then
 		local Tab = ActiveData.Tab
+		local Selectable = ActiveData.Selectable
 		local ActiveTab = InfoSelector.ActiveTab
-		TabFocused = InfoSelector:CompareTabs(ActiveTab, Tab)
 
+		TabFocused = InfoSelector:CompareTabs(ActiveTab, Tab)
 		InfoSelector:RemoveTab(Tab)
-		ActiveData.Selectable:SetSelected(false)
+		Selectable:SetSelected(false)
 	end
 
 	--// Set this log to be selected
@@ -674,7 +685,9 @@ function Ui:SetFocusedRemote(Data)
 				Text = "Remove log",
 				Callback = function()
 					InfoSelector:RemoveTab(Tab)
+					Data.Selectable:Remove()
 					HeaderData:Remove()
+					ActiveData = nil
 				end,
 			}
 		}
@@ -755,15 +768,8 @@ function Ui:GetRemoteHeader(Data: Log)
 	end
 
 	function HeaderData:Remove()
-		local TreeNode = self.TreeNode
-		local Selectable = self.Selectable
-
-		--// Remove Selectable
-		if Selectable then
-			Selectable:Remove()
-		end
-
 		--// Remove TreeNode
+		local TreeNode = self.TreeNode
 		if TreeNode then
 			TreeNode:Remove()
 		end

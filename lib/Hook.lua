@@ -39,10 +39,10 @@ local function Merge(Base: table, New: table)
 	end
 end
 
-function Hook:RunOnActors(Code: string, ChannelId: number, ...)
+function Hook:RunOnActors(Code: string, ChannelId: number)
 	if not getactors then return end
 	for _, Actor in getactors() do 
-		run_on_actor(Actor, Code, ChannelId, ...)
+		run_on_actor(Actor, Code, ChannelId)
 	end
 end
 

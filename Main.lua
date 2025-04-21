@@ -88,6 +88,7 @@ ActorCode ..= [=[
 	local ExtraData = {
 		IsActor = true
 	}
+	print("ChannelId", ...)
 	Libraries.Hook:BeginService(Libraries, ExtraData, ...)
 ]=]
 

@@ -179,7 +179,7 @@ function Process:ProcessRemote(Data)
     --// Add to queue
     Merge(Data, {
 		CallingScript = getcallingscript(),
-		CallingFunction = debug.info(4, "f"),
+		CallingFunction = debug.info(5, "f"),
         Id = Id,
 		ClassData = ClassData
     })
