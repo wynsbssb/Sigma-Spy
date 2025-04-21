@@ -1,7 +1,9 @@
---// Custom remote responces
+--// Sigma Spy custom remote responces
+--// The Return table will be unpacked for the responce
+
 return {
-	-- [game.ReplicatedStorage.Remotes.Inventory.GetProfileData] = {
-	-- 	Method = "InvokeServer",
-	-- 	Return = MM2Inventory
+	-- [game.ReplicatedStorage.Remotes.HelloWorld] = {
+	-- 	Method = "FireServer",
+	-- 	Return = {"Hello world from Sigma Spy!"}
 	-- }
 }
