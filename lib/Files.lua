@@ -88,7 +88,7 @@ function Files:GetFile(Path: string, CustomAsset: boolean?): string?
 	if CustomAsset then
 		--// Check if the file should be written to
 		self:FileCheck(LocalPath, function()
-			writefile(LocalPath, Content)
+			return Content
 		end)
 
 		return self:LoadCustomasset(LocalPath)

@@ -68,7 +68,7 @@ local Config
 local ActiveData = nil
 local RemotesCount = 0
 
-local TextFont = Font.fromEnum(Enum.Font.Bangers)
+local TextFont = Font.fromEnum(Enum.Font.Code)
 local FontSuccess = false
 
 local function DeepCloneTable(Table)
