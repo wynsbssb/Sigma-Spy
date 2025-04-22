@@ -15,23 +15,41 @@ local Process
 --// This is a custom hookmetamethod function, feel free to replace with your own
 --// The callback is expected to return a nil value sometimes which should be ingored
 local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaCallback
-	local Metatable = getrawmetatable(self)
-	local OriginalFunc = rawget(Metatable, Call)
-	
-	--// Replace function
-	setreadonly(Metatable, false)
-	rawset(Metatable, Call, function(...)
+	local OriginalFunc
+	OriginalFunc = hookmetamethod(self, Call, function(...)
+		--// Invoke callback and check for a reponce otherwise ignored
 		local ReturnValues = Callback(...)
         if ReturnValues then
 			return unpack(ReturnValues)
         end
 
+		--// Invoke orignal function
 		return OriginalFunc(...)
 	end)
-	setreadonly(Metatable, true)
-
 	return OriginalFunc
 end
+
+--// Replace metatable function method, this can be a workaround on some games if hookmetamethod is detected
+--// To use this, just uncomment it and comment out the method above
+--//
+-- local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaCallback
+-- 	local Metatable = getrawmetatable(self)
+-- 	local OriginalFunc = rawget(Metatable, Call)
+	
+-- 	--// Replace function
+-- 	setreadonly(Metatable, false)
+-- 	rawset(Metatable, Call, function(...)
+-- 		local ReturnValues = Callback(...)
+--         if ReturnValues then
+-- 			return unpack(ReturnValues)
+--         end
+
+-- 		return OriginalFunc(...)
+-- 	end)
+-- 	setreadonly(Metatable, true)
+
+-- 	return OriginalFunc
+-- end
 
 local function Merge(Base: table, New: table)
 	for Key, Value in next, New do

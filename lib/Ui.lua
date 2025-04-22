@@ -1,4 +1,6 @@
 local Ui = {
+	DefaultEditorContent = "--Welcome to Sigma Spy",
+
     SeasonLabels = { 
         January = "⛄%s⛄", 
         February = "🌨️%s🏂", 
@@ -431,13 +433,15 @@ end
 
 function Ui:MakeEditorTab(InfoSelector, Window)
 	local SyntaxColors = Config.SyntaxColors
+	local Default = self.DefaultEditorContent
 
 	--// IDE
 	local CodeEditor = IDEModule.CodeFrame.new({
 		Editable = false,
 		FontSize = 13,
 		Colors = SyntaxColors,
-		FontFace = TextFont
+		FontFace = TextFont,
+		Text = Default
 	})
 	
 	local EditorTab = InfoSelector:CreateTab({
@@ -865,7 +869,7 @@ function Ui:CreateLog(Data: Log)
 	if FindString then
 		for _, Arg in next, ClonedArgs do
 			if typeof(Arg) == "string" then
-				Text = `{Arg} | {Text}`
+				Text = `{Arg:sub(1,15)} | {Text}`
 				break
 			end
 		end

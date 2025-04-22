@@ -5,16 +5,25 @@ type table = {
 --// Module
 local Files = {
 	UseWorkspace = false,
-	Folder = nil,
-	RepoUrl = nil
+	Folder = "Sigma spy",
+	RepoUrl = nil,
+	FolderStructure = {
+		["Sigma Spy"] = {
+			"assets",
+		}
+	}
 }
 
 --// Services
 local HttpService: HttpService
 
 function Files:Init(Data)
+	local FolderStructure = self.FolderStructure
     local Services = Data.Services
     HttpService = Services.HttpService
+
+	--// Check if the folders need to be created
+	self:CheckFolders(FolderStructure, "")
 end
 
 function Files:PushConfig(Config: table)
@@ -108,6 +117,27 @@ function Files:FileCheck(Path: string, Callback)
 	--// Create and write the template to the missing file
 	local Template = Callback()
 	writefile(Path, Template)
+end
+
+function Files:FolderCheck(Path: string)
+	if isfolder(Path) then return end
+	makefolder(Path)
+end
+
+function Files:CheckFolders(Structure: table, Path: string?)
+	for ParentName, Name in next, Structure do
+		--// Check existance of the parent folder
+		if typeof(Name) == "table" then
+			local NewPath = `{Path}/{ParentName}`
+			self:FolderCheck(NewPath)
+			self:CheckFolders(Name, NewPath)
+			continue
+		end
+
+		--// Check existance of child folder
+		local FolderPath = `{Path}/{Name}`
+		self:FolderCheck(FolderPath)
+	end
 end
 
 function Files:TemplateCheck(Path: string, TemplateName: string)
