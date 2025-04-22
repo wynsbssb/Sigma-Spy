@@ -156,6 +156,24 @@ function Process:GetRemoteSpoof(Remote: Instance, Method: string)
 	return {Spoof.Return}
 end
 
+function Process:FindCallingLClosure(Offset: number)
+    Offset += 1
+
+    while true do
+        Offset += 1
+
+        --// Check if the stack level is valid
+        local IsValid = debug.info(Offset, "l") ~= -1
+        if not IsValid then continue end
+
+        --// Check if the function is valud
+        local Function = debug.info(Offset, "f")
+        if not Function then return end
+
+        return Function
+    end
+end
+
 function Process:ProcessRemote(Data)
     local OriginalFunc = Data.OriginalFunc
     local Remote = Data.Remote
@@ -179,7 +197,7 @@ function Process:ProcessRemote(Data)
     --// Add to queue
     Merge(Data, {
 		CallingScript = getcallingscript(),
-		CallingFunction = debug.info(5, "f"),
+		CallingFunction = self:FindCallingLClosure(5),
         Id = Id,
 		ClassData = ClassData
     })
