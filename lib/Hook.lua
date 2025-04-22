@@ -19,9 +19,10 @@ local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaC
 	OriginalFunc = hookmetamethod(self, Call, function(...)
 		--// Invoke callback and check for a reponce otherwise ignored
 		local ReturnValues = Callback(...)
-        if ReturnValues then
-			return unpack(ReturnValues)
-        end
+		if ReturnValues then
+			local Length = table.maxn(ReturnValues)
+			return unpack(ReturnValues, 1, Length)
+		end
 
 		--// Invoke orignal function
 		return OriginalFunc(...)
@@ -39,10 +40,12 @@ end
 -- 	--// Replace function
 -- 	setreadonly(Metatable, false)
 -- 	rawset(Metatable, Call, function(...)
+-- 		--// Invoke callback and check for a reponce otherwise ignored
 -- 		local ReturnValues = Callback(...)
---         if ReturnValues then
--- 			return unpack(ReturnValues)
---         end
+-- 		if ReturnValues then
+-- 			local Length = table.maxn(ReturnValues)
+-- 			return unpack(ReturnValues, 1, Length)
+-- 		end
 
 -- 		return OriginalFunc(...)
 -- 	end)
@@ -69,7 +72,7 @@ local function ProcessRemote(OriginalFunc, MetaMethod: string, self, Method: str
 		Remote = self,
 		Method = Method,
 		OriginalFunc = OriginalFunc,
-		MetaMethod = "__index",
+		MetaMethod = MetaMethod,
 		TransferType = "Send",
 		Args = {...}
 	})

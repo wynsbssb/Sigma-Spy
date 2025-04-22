@@ -196,7 +196,9 @@ function Process:ProcessRemote(Data)
 
     --// Call original function
     if not OriginalFunc then return end
-    local ReturnValues = {OriginalFunc(Remote, unpack(Args))}
+
+    local ArgsLength = table.maxn(Args)
+    local ReturnValues = {OriginalFunc(Remote, unpack(Args, 1, ArgsLength))}
 
     --// Log return values
     Data.ReturnValues = ReturnValues

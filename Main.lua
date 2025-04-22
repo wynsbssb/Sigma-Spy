@@ -20,7 +20,7 @@
 --// File handling configuration 
 local FilesConfig = {
 	UseWorkspace = false,
-	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main" --"http://127.0.0.1:3000"
+	RepoUrl =  "http://127.0.0.1:3000" --"https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main"
 }
 
 --// Service handlers
