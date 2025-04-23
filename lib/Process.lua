@@ -174,18 +174,41 @@ function Process:FindCallingLClosure(Offset: number)
     end
 end
 
-function Process:ProcessRemote(Data)
+function Process:Callback(Data): table?
+    --// Unpack Data
     local OriginalFunc = Data.OriginalFunc
+    local Id = Data.Id
+    local Args = Data.Args
+    local Method = Data.Method
+    local Remote = Data.Remote
+
+    local RemoteData = self:GetRemoteData(Id)
+
+    --// Check if the Remote is Blocked
+    if RemoteData.Blocked then return {} end
+
+    --// Check for a spoof
+    local Spoof = self:GetRemoteSpoof(Remote, Method)
+    if Spoof then return Spoof end
+
+    --// Check if the orignal function was passed
+    if not OriginalFunc then return end
+
+    --// Invoke orignal function
+    local ArgsLength = table.maxn(Args)
+    return {OriginalFunc(Remote, unpack(Args, 1, ArgsLength))}
+end
+
+function Process:ProcessRemote(Data): table?
+    --// Unpack Data
     local Remote = Data.Remote
 	local Method = Data.Method
-    local Args = Data.Args
     local TransferType = Data.TransferType
 
 	--// Check if the transfertype method is allowed
 	if TransferType and not self:RemoteAllowed(Remote, TransferType, Method) then return end
 
     local Id = Communication:GetDebugId(Remote)
-    local RemoteData = self:GetRemoteData(Id)
     local ClassData = self:GetClassData(Remote)
 
     --// Add extra data into the log if needed
@@ -202,24 +225,12 @@ function Process:ProcessRemote(Data)
 		ClassData = ClassData
     })
 
+    --// Invoke the Remote and log return values
+    local ReturnValues = self:Callback(Data)
+    Data.ReturnValues = ReturnValues
+
     --// Queue log
     Communication:QueueLog(Data)
-
-    --// Blocked
-    if RemoteData.Blocked then return {} end
-
-    --// Check for a spoof
-	local Spoof = self:GetRemoteSpoof(Remote, Method)
-    if Spoof then return Spoof end
-
-    --// Call original function
-    if not OriginalFunc then return end
-
-    local ArgsLength = table.maxn(Args)
-    local ReturnValues = {OriginalFunc(Remote, unpack(Args, 1, ArgsLength))}
-
-    --// Log return values
-    Data.ReturnValues = ReturnValues
 
     return ReturnValues
 end

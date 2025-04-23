@@ -553,10 +553,12 @@ function Ui:SetFocusedRemote(Data)
 	--// Functions
 	function Data:RepeatCall()
 		local Signal = Hook:Index(Remote, Method)
+		local Length = table.maxn(Args)
+
 		if IsReceive then
-			firesignal(Signal, unpack(Args))
+			firesignal(Signal, unpack(Args, 1, Length))
 		else
-			Signal(Remote, unpack(Args))
+			Signal(Remote, unpack(Args, 1, Length))
 		end
 	end
 	function Data:GetReturn()
@@ -819,7 +821,7 @@ function Ui:BeginLogService()
 	coroutine.wrap(function()
 		while true do
 			Ui:ProcessLogQueue()
-			wait()
+			task.wait()
 		end
 	end)()
 end
@@ -858,9 +860,11 @@ function Ui:CreateLog(Data: Log)
     if RemoteData.Excluded then return end
 
 	--// Deep clone data
-	local ClonedArgs = DeepCloneTable({unpack(Args)})
+	local ArgsLength = table.maxn(Args)
+	local ClonedArgs = DeepCloneTable({unpack(Args, 1, ArgsLength)})
 	Data.Args = ClonedArgs
 
+	--// Generate log title
 	local Color = Config.MethodColors[Method:lower()]
 	local Text = NoTreeNodes and `{Remote} | {Method}` or Method
 
@@ -875,7 +879,7 @@ function Ui:CreateLog(Data: Log)
 		end
 	end
 
-	--// HeaderData
+	--// Fetch HeaderData by the RemoteID used for stacking
 	local HeaderData = self:GetRemoteHeader(Data):LogAdded()
 	local RemotesList = self.RemotesList
 

@@ -94,14 +94,14 @@ end
 
 function Hook:HookMeta()
 	--// Namecall hook
-	local On; On = HookMetaMethod(game, "__namecall", function(self, ...)
+	local On; On = HookMetaMethod(game, "__namecall", newcclosure(function(self, ...)
 		local Method = getnamecallmethod()
 		return ProcessRemote(On, "__namecall", self, Method, ...)
-	end)
+	end))
 	--// Index call hook
-	local Oi; Oi = HookMetaMethod(game, "__index", function(...)
+	local Oi; Oi = HookMetaMethod(game, "__index", newcclosure(function(...)
 		return __IndexCallback(Oi, ...)
-	end)
+	end))
 
 	Merge(self, {
 		OrignalNamecall = On,
