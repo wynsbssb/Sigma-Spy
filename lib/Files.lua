@@ -23,7 +23,7 @@ function Files:Init(Data)
     HttpService = Services.HttpService
 
 	--// Check if the folders need to be created
-	self:CheckFolders(FolderStructure, "")
+	self:CheckFolders(FolderStructure)
 end
 
 function Files:PushConfig(Config: table)
@@ -124,18 +124,22 @@ function Files:FolderCheck(Path: string)
 	makefolder(Path)
 end
 
+function Files:CheckPath(Parent: string, Child: string)
+	return Parent and `{Parent}/{Child}` or Child
+end
+
 function Files:CheckFolders(Structure: table, Path: string?)
 	for ParentName, Name in next, Structure do
 		--// Check existance of the parent folder
 		if typeof(Name) == "table" then
-			local NewPath = `{Path}/{ParentName}`
+			local NewPath = self:CheckPath(Path, ParentName)
 			self:FolderCheck(NewPath)
 			self:CheckFolders(Name, NewPath)
 			continue
 		end
 
 		--// Check existance of child folder
-		local FolderPath = `{Path}/{Name}`
+		local FolderPath = self:CheckPath(Path, Name)
 		self:FolderCheck(FolderPath)
 	end
 end
