@@ -12,6 +12,7 @@ local Hook
 
 local Channel
 
+--// DebugId functions
 local InvokeGetDebugId = DebugIdRemote.Invoke
 function DebugIdRemote.OnInvoke(Object: Instance): string
 	return Object:GetDebugId()
@@ -48,13 +49,22 @@ function Module:GetCommCallback(Type: string): (...any) -> ...any
     return CommCallbacks[Type]
 end
 
+function Module:ChannelIndex(Channel, Property: string)
+    if typeof(Channel) == "Instance" then
+        return Hook:Index(Channel, Property)
+    end
+
+    --// Some executors return a UserData type
+    return Channel[Property]
+end
+
 function Module:Communicate(...)
-    local Fire = Hook:Index(Channel, "Fire")
+    local Fire = self:ChannelIndex(Channel, "Fire")
     Fire(Channel, ...)
 end
 
 function Module:AddConnection(Callback): RBXScriptConnection
-    local Event = Hook:Index(Channel, "Event")
+    local Event = self:ChannelIndex(Channel, "Event")
     return Event:Connect(Callback)
 end
 
@@ -83,29 +93,6 @@ end
 
 function Module:GetChannel(ChannelId: number)
     return get_comm_channel(ChannelId)
-end
-
-function Module:WaitFor(For)
-    local Args
-    local Callback = function(Type: string, ...)
-        if Type ~= For then return end
-        Args = {...}
-    end
-
-    --// Connection
-    local Connection = self:AddConnection(Callback)
-
-    --// Wait for arguments
-    while not Args do task.wait() end
-
-    --// Success
-    Connection:Disconnect()
-    return Args
-end
-
-function Module:Request(Type, WaitFor, ...)
-    self:Communicate(Type, WaitFor, ...)
-    return self:WaitFor(WaitFor)
 end
 
 return Module

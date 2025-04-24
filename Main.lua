@@ -17,13 +17,22 @@
     https://github.com/depthso
 ]]
 
---// File handling configuration 
-local FilesConfig = {
-	UseWorkspace = false,
-	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main" -- "http://127.0.0.1:3000"
+--// Base Configuration
+local Parameters = {...}
+local Overwrites = Parameters[1]
+local Configuration = {
+	UseWorkspace = false, 
+	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main"
 }
 
---// Service handlers
+--// Load overwrites
+if Overwrites then
+	for Key, Value in Overwrites do
+		Configuration[Key] = Value
+	end
+end
+
+--// Service handler
 local Services = setmetatable({}, {
 	__index = function(self, Name: string): Instance
 		local Service = game:GetService(Name)
@@ -31,20 +40,17 @@ local Services = setmetatable({}, {
 	end,
 })
 
---// Services
-local Players: Players = Services.Players
-
 --// Fetch Files module code
 local FilesScript
-if FilesConfig.UseWorkspace then
-	FilesScript = readfile(`{FilesConfig.Folder}/lib/Files.lua`)
+if Configuration.UseWorkspace then
+	FilesScript = readfile(`{Configuration.Folder}/lib/Files.lua`)
 else
-	FilesScript = game:HttpGet(`{FilesConfig.RepoUrl}/lib/Files.lua`)
+	FilesScript = game:HttpGet(`{Configuration.RepoUrl}/lib/Files.lua`)
 end
 
 --// Load files module
 local Files = loadstring(FilesScript)()
-Files:PushConfig(FilesConfig)
+Files:PushConfig(Configuration)
 Files:Init({
 	Services = Services
 })
@@ -63,6 +69,9 @@ local Scripts = {
 	Generation = Files:GetModule("lib/Generation"),
 	Communication = Files:GetModule("lib/Communication")
 }
+
+--// Services
+local Players: Players = Services.Players
 
 --// Dependencies
 local Modules = Files:LoadLibraries(Scripts)

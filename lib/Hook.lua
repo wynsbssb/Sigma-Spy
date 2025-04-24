@@ -15,10 +15,13 @@ local Process
 --// This is a custom hookmetamethod function, feel free to replace with your own
 --// The callback is expected to return a nil value sometimes which should be ingored
 local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaCallback
+	local CallbackC = newcclosure(Callback)
 	local OriginalFunc
-	OriginalFunc = hookmetamethod(self, Call, function(...)
+
+	--// Hook metamethod call
+	OriginalFunc = hookmetamethod(self, Call, newcclosure(function(...)
 		--// Invoke callback and check for a reponce otherwise ignored
-		local ReturnValues = Callback(...)
+		local ReturnValues = CallbackC(...)
 		if ReturnValues then
 			local Length = table.maxn(ReturnValues)
 			return unpack(ReturnValues, 1, Length)
@@ -26,7 +29,8 @@ local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaC
 
 		--// Invoke orignal function
 		return OriginalFunc(...)
-	end)
+	end))
+
 	return OriginalFunc
 end
 
@@ -78,6 +82,16 @@ local function ProcessRemote(OriginalFunc, MetaMethod: string, self, Method: str
 	})
 end
 
+-- local HookedFuncs = {}
+-- local function CheckFunctionHooked(Func: (...any) -> ...any, Callback)
+-- 	--// Check if the function is already hooked
+-- 	if HookedFuncs[Func] then return end
+
+-- 	hookfunction(Func, Callback)
+-- end
+
+--// TODO: Use hookfunction instead to patch a debug.info(Remote.FireServer, "n") detection
+--// I wish debug.setname was standard but heck, otherwise predifined values won't be hooked
 local function __IndexCallback(OriginalIndex, self, Method: string)
 	--// Check if the orignal value is a function
 	local OriginalFunc = OriginalIndex(self, Method)
@@ -86,22 +100,24 @@ local function __IndexCallback(OriginalIndex, self, Method: string)
 	--// Check if the Object is allowed 
 	if not Process:RemoteAllowed(self, "Send", Method) then return end
 
-	--// Process the remote data
-	return {function(self, ...) -- Possible detection?
+	local function Callback(self, ...)
 		return ProcessRemote(OriginalFunc, "__index", self, Method, ...)
-	end}
+	end
+
+	--// Process the remote data
+	return {newcclosure(Callback)}
 end
 
 function Hook:HookMeta()
 	--// Namecall hook
-	local On; On = HookMetaMethod(game, "__namecall", newcclosure(function(self, ...)
+	local On; On = HookMetaMethod(game, "__namecall", function(self, ...)
 		local Method = getnamecallmethod()
 		return ProcessRemote(On, "__namecall", self, Method, ...)
-	end))
+	end)
 	--// Index call hook
-	local Oi; Oi = HookMetaMethod(game, "__index", newcclosure(function(...)
+	local Oi; Oi = HookMetaMethod(game, "__index", function(...)
 		return __IndexCallback(Oi, ...)
-	end))
+	end)
 
 	Merge(self, {
 		OrignalNamecall = On,
