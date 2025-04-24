@@ -12,6 +12,9 @@ type MetaCallback = (Instance, ...any)->...any
 --// Modules
 local Process
 
+--// TODO: Add a function to the return for replacing unpack 
+--// If no function is returned then the callback is ignored
+
 --// This is a custom hookmetamethod function, feel free to replace with your own
 --// The callback is expected to return a nil value sometimes which should be ingored
 local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaCallback
@@ -34,6 +37,22 @@ local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaC
 	return OriginalFunc
 end
 
+local function HookFunction(Func: (...any) -> ...any, Callback: (...any) -> ...any)
+	local OriginalFunc
+
+	OriginalFunc = hookfunction(Func, function(...)
+		--// Invoke callback and check for a reponce otherwise ignored
+		local ReturnValues = Callback(...)
+		if ReturnValues then
+			local Length = table.maxn(ReturnValues)
+			return unpack(ReturnValues, 1, Length)
+		end
+
+		--// Invoke orignal function
+		return OriginalFunc(...)
+	end)
+end
+
 --// Replace metatable function method, this can be a workaround on some games if hookmetamethod is detected
 --// To use this, just uncomment it and comment out the method above
 --//
@@ -43,7 +62,7 @@ end
 	
 -- 	--// Replace function
 -- 	setreadonly(Metatable, false)
--- 	rawset(Metatable, Call, function(...)
+-- 	rawset(Metatable, Call, newcclosure(function(...)
 -- 		--// Invoke callback and check for a reponce otherwise ignored
 -- 		local ReturnValues = Callback(...)
 -- 		if ReturnValues then
@@ -52,7 +71,7 @@ end
 -- 		end
 
 -- 		return OriginalFunc(...)
--- 	end)
+-- 	end))
 -- 	setreadonly(Metatable, true)
 
 -- 	return OriginalFunc
@@ -82,55 +101,53 @@ local function ProcessRemote(OriginalFunc, MetaMethod: string, self, Method: str
 	})
 end
 
--- local HookedFuncs = {}
--- local function CheckFunctionHooked(Func: (...any) -> ...any, Callback)
--- 	--// Check if the function is already hooked
--- 	if HookedFuncs[Func] then return end
+function Hook:HookRemoteTypeIndex(ClassName: string, FuncName: string)
+	local Remote = Instance.new(ClassName)
+	local Func = Remote[FuncName]
+	local OriginalFunc
 
--- 	hookfunction(Func, Callback)
--- end
+	--// Remotes will share the same functions
+	--// 	For example FireServer will be identical
+	--// Addionally, this is for __index calls.
+	--// 	A __namecall hook will not detect this
+	OriginalFunc = HookFunction(Func, function(self, ...)
+		--// Check if the Object is allowed 
+		if not Process:RemoteAllowed(self, "Send", FuncName) then return end
 
---// TODO: Use hookfunction instead to patch a debug.info(Remote.FireServer, "n") detection
---// I wish debug.setname was standard but heck, otherwise predifined values won't be hooked
-local function __IndexCallback(OriginalIndex, self, Method: string)
-	--// Check if the orignal value is a function
-	local OriginalFunc = OriginalIndex(self, Method)
-	if typeof(OriginalFunc) ~= "function" then return end
-
-	--// Check if the Object is allowed 
-	if not Process:RemoteAllowed(self, "Send", Method) then return end
-
-	local function Callback(self, ...)
-		return ProcessRemote(OriginalFunc, "__index", self, Method, ...)
-	end
-
-	--// Process the remote data
-	return {newcclosure(Callback)}
+		--// Process the remote data
+		return ProcessRemote(OriginalFunc, "__index", self, FuncName, ...)
+	end)
 end
 
-function Hook:HookMeta()
+function Hook:HookRemoteIndexes()
+	local RemoteClassData = Process.RemoteClassData
+
+	for ClassName, Data in RemoteClassData do
+		local FuncName = Data.Send[1]
+		self:HookRemoteTypeIndex(ClassName, FuncName)
+	end
+end
+
+function Hook:BeginHooks()
 	--// Namecall hook
 	local On; On = HookMetaMethod(game, "__namecall", function(self, ...)
 		local Method = getnamecallmethod()
 		return ProcessRemote(On, "__namecall", self, Method, ...)
 	end)
-	--// Index call hook
-	local Oi; Oi = HookMetaMethod(game, "__index", function(...)
-		return __IndexCallback(Oi, ...)
-	end)
+
+	self:HookRemoteIndexes()
 
 	Merge(self, {
 		OrignalNamecall = On,
-		OrignalIndex = Oi,
+		--OrignalIndex = Oi
 	})
 end
 
 function Hook:Index(Object: Instance, Key: string)
-	local OrignalIndex = self.OrignalIndex
-	if OrignalIndex then
-		return OrignalIndex(Object, Key)
-	end
-
+	-- local OrignalIndex = self.OrignalIndex
+	-- if OrignalIndex then
+	-- 	return OrignalIndex(Object, Key)
+	-- end
 	return Object[Key]
 end
 
@@ -144,7 +161,14 @@ function Hook:PushConfig(Overwrites)
 end
 
 function Hook:HookClientInvoke(Remote, Method, Callback): ((...any) -> ...any)?
-	local PreviousFunction = getcallbackvalue(Remote, Method)
+	local Success, Function = pcall(function()
+		return getcallbackvalue(Remote, Method)
+	end)
+
+	--// Some executors like Potassium will throw a error if the Callback value is nil
+	if not Success then return end
+
+	local PreviousFunction = Function
 	Remote[Method] = Callback
 
 	return PreviousFunction
@@ -185,9 +209,7 @@ function Hook:ConnectClientRecive(Remote)
 	if not IsRemoteFunction then
    		Remote[Method]:Connect(Callback)
 	else -- Remote functions
-		pcall(function()
-			self:HookClientInvoke(Remote, Method, Callback)
-		end)
+		self:HookClientInvoke(Remote, Method, Callback)
 	end
 end
 
@@ -221,7 +243,7 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId: number)
 
 	--// Hook configuration
 	self:Init(InitData)
-	self:HookMeta()
+	self:BeginHooks()
 end
 
 return Hook
