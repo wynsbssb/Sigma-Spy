@@ -12,9 +12,6 @@ type MetaCallback = (Instance, ...any)->...any
 --// Modules
 local Process
 
---// TODO: Add a function to the return for replacing unpack 
---// If no function is returned then the callback is ignored
-
 --// This is a custom hookmetamethod function, feel free to replace with your own
 --// The callback is expected to return a nil value sometimes which should be ingored
 local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaCallback
@@ -96,9 +93,8 @@ local function ProcessRemote(OriginalFunc, MetaMethod: string, self, Method: str
 		Method = Method,
 		OriginalFunc = OriginalFunc,
 		MetaMethod = MetaMethod,
-		TransferType = "Send",
-		Args = {...}
-	})
+		TransferType = "Send"
+	}, ...)
 end
 
 function Hook:HookRemoteTypeIndex(ClassName: string, FuncName: string)
@@ -135,6 +131,7 @@ function Hook:BeginHooks()
 		return ProcessRemote(On, "__namecall", self, Method, ...)
 	end)
 
+	--// Hook Remote functions
 	self:HookRemoteIndexes()
 
 	Merge(self, {
@@ -200,9 +197,8 @@ function Hook:ConnectClientRecive(Remote)
             Method = Method,
             OriginalFunc = PreviousFunction,
             IsReceive = true,
-            MetaMethod = "Connect",
-            Args = {...}
-        })
+            MetaMethod = "Connect"
+        }, ...)
 	end
 
 	--// Connect remote
@@ -213,19 +209,25 @@ function Hook:ConnectClientRecive(Remote)
 	end
 end
 
-function Hook:BeginService(Libraries, ExtraData, ChannelId: number)
+function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
+	--// Librareis
 	local ReturnSpoofs = Libraries.ReturnSpoofs
 	local ProcessLib = Libraries.Process
 	local Communication = Libraries.Communication
+	local Generation = Libraries.Generation
 
+	--// Init data
 	local InitData = {
 		Modules = {
 			ReturnSpoofs = ReturnSpoofs,
+			Generation = Generation,
 			Communication = Communication,
 			Process = ProcessLib,
 			Hook = self
 		}
 	}
+
+	print("ChannelId:", ChannelId, "...:", ...)
 	
 	--// Communication configuration
 	local Channel = Communication:GetChannel(ChannelId)

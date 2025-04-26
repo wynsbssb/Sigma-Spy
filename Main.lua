@@ -144,6 +144,8 @@ Communication:AddCommCallback("QueueLog", function(...)
 	Ui:QueueLog(...)
 end)
 
+print("ChannelId", ChannelId)
+
 --// Begin hook
 Hook:BeginService(Modules, nil, ChannelId) -- Run on self
 Hook:RunOnActors(ActorCode, ChannelId) -- Run on actors

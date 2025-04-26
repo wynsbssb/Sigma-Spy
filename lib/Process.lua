@@ -1,3 +1,20 @@
+type table = {
+    [any]: any
+}
+
+type RemoteData = {
+	Remote: Instance,
+	IsReceive: boolean?,
+	Args: table,
+    Id: string,
+	Method: string,
+    TransferType: string,
+	ValueReplacements: table,
+    ReturnValues: table,
+    OriginalFunc: (Instance, ...any) -> ...any
+}
+
+--// Module
 local Process = {
     --// Remote classes
     RemoteClassData = {
@@ -50,14 +67,11 @@ local Process = {
     RemoteOptions = {}
 }
 
-type table = {
-	[any]: any
-}
-
 --// Modules
 local Hook
 local Communication
 local ReturnSpoofs
+local Generation
 local Ui
 
 --// Communication channel
@@ -76,10 +90,13 @@ end
 
 function Process:Init(Data)
     local Modules = Data.Modules
+
+    --// Modules
     Ui = Modules.Ui
     Hook = Modules.Hook
     Communication = Modules.Communication
     ReturnSpoofs = Modules.ReturnSpoofs
+    Generation = Modules.Generation
 end
 
 function Process:PushConfig(Overwrites)
@@ -174,11 +191,10 @@ function Process:FindCallingLClosure(Offset: number)
     end
 end
 
-function Process:Callback(Data): table?
+function Process:Callback(Data: RemoteData, ...): table?
     --// Unpack Data
     local OriginalFunc = Data.OriginalFunc
     local Id = Data.Id
-    local Args = Data.Args
     local Method = Data.Method
     local Remote = Data.Remote
 
@@ -195,11 +211,10 @@ function Process:Callback(Data): table?
     if not OriginalFunc then return end
 
     --// Invoke orignal function
-    local ArgsLength = table.maxn(Args)
-    return {OriginalFunc(Remote, unpack(Args, 1, ArgsLength))}
+    return {OriginalFunc(Remote, ...)}
 end
 
-function Process:ProcessRemote(Data): table?
+function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Unpack Data
     local Remote = Data.Remote
 	local Method = Data.Method
@@ -208,8 +223,10 @@ function Process:ProcessRemote(Data): table?
 	--// Check if the transfertype method is allowed
 	if TransferType and not self:RemoteAllowed(Remote, TransferType, Method) then return end
 
+    --// Fetch details
     local Id = Communication:GetDebugId(Remote)
     local ClassData = self:GetClassData(Remote)
+    local ValueSwaps = Generation:MakeValueSwapsTable()
 
     --// Add extra data into the log if needed
     local ExtraData = self.ExtraData
@@ -222,11 +239,13 @@ function Process:ProcessRemote(Data): table?
 		CallingScript = getcallingscript(),
 		CallingFunction = self:FindCallingLClosure(5),
         Id = Id,
-		ClassData = ClassData
+		ClassData = ClassData,
+        ValueSwaps = ValueSwaps,
+        Args = {...}
     })
 
     --// Invoke the Remote and log return values
-    local ReturnValues = self:Callback(Data)
+    local ReturnValues = self:Callback(Data, ...)
     Data.ReturnValues = ReturnValues
 
     --// Queue log

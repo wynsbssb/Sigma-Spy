@@ -114,6 +114,7 @@ function Ui:FontWasSuccessful()
 	local Window = self.Window
 	Window:SetTheme("DarkTheme")
 
+	--// Error message
 	self:ShowModal({
 		"Unfortunately your executor was unable to download the font and therefore switched to the Dark theme",
 		"\nIf you would like to use the ImGui theme, \nplease download the font (assets/ProggyClean.ttf)",
@@ -147,6 +148,7 @@ function Ui:Init(Data)
 	Hook = Modules.Hook
 	Config = Modules.Config
 
+	--// ReGui
 	self:LoadReGui()
 end
 
@@ -202,6 +204,7 @@ function Ui:ShowModal(Lines: table)
 	local Window = self.Window
 	local Message = table.concat(Lines, "\n")
 
+	--// Modal Window
 	local ModalWindow = Window:PopupModal({
 		Title = "Sigma Spy"
 	})
@@ -314,9 +317,11 @@ function Ui:DisplayAura()
     local Window = self.Window
     local Rand = self.RandomSeed
 
+	--// Aura (boiiiii)
     local AURA = Rand:NextInteger(1, 9999999)
     local AURADELAY = Rand:NextInteger(1, 5)
 
+	--// Title
 	local Title = ` Sigma Spy - Depso | AURA: {AURA} `
 	local Seasonal = self:TurnSeasonal(Title)
     Window:SetTitle(Seasonal)
@@ -342,6 +347,7 @@ function Ui:CreateWindowContent(Window)
         Fill = true
     })
 
+	--// Remotes list
     self.RemotesList = Layout:Canvas({
         Scroll = true,
         UiPadding = 5,
@@ -350,15 +356,19 @@ function Ui:CreateWindowContent(Window)
         Size = UDim2.new(0, 130, 1, 0)
     })
 
+	--// Tab box
 	local InfoSelector = Layout:TabSelector({
         NoAnimation = true,
         Size = UDim2.new(1, -130, 0.4, 0),
     })
 
-	self:MakeEditorTab(InfoSelector, Window)
-	self:MakeOptionsTab(InfoSelector)
+	--// 
 	self.InfoSelector = InfoSelector
 	self.CanvasLayout = Layout
+
+	--// Make tabs
+	self:MakeEditorTab(InfoSelector)
+	self:MakeOptionsTab(InfoSelector)
 end
 
 function Ui:MakeOptionsTab(InfoSelector)
@@ -418,7 +428,6 @@ function Ui:AddDetailsSection(OptionsTab)
 		Rows = {
 			"Sigma spy - Created by depso!",
 			"Thank you to syn for your suggestions and testing",
-			"I wish potassium wasn't so crudely produced",
 			"Boiiiiii what did you say about Sigma Spy 💀💀 (+999999 AURA)"
 		}
 	})
@@ -431,9 +440,11 @@ local function MakeActiveDataCallback(Func: string)
 	end
 end
 
-function Ui:MakeEditorTab(InfoSelector, Window)
-	local SyntaxColors = Config.SyntaxColors
+function Ui:MakeEditorTab(InfoSelector)
 	local Default = self.DefaultEditorContent
+	local Window = self.Window
+
+	local SyntaxColors = Config.SyntaxColors
 
 	--// IDE
 	local CodeEditor = IDEModule.CodeFrame.new({
@@ -518,6 +529,7 @@ function Ui:SetFocusedRemote(Data)
 	local Function = Data.CallingFunction
 	local ClassData = Data.ClassData
 	local HeaderData = Data.HeaderData
+	local ValueSwaps = Data.ValueSwaps
 	local Args = Data.Args
 	local Id = Data.Id
 
@@ -587,6 +599,8 @@ function Ui:SetFocusedRemote(Data)
 			return 
 		end
 		
+		--// Tables 
+		-- TODO: Put ths in Generation library
 		local Connections = {}
 		local FunctionInfo = {
 			["Script"] = {
@@ -613,7 +627,7 @@ function Ui:SetFocusedRemote(Data)
 		--// Get remote connections
 		local ReceiveMethods = ClassData.Receive
 		for _, Method: string in next, ReceiveMethods do
-			pcall(function() --TODO GETCALLBACKVALUE
+			pcall(function() -- TODO: GETCALLBACKVALUE
 				local Signal = Hook:Index(Remote, Method)
 				Connections[Method] = Generation:ConnectionsTable(Signal)
 			end)
@@ -656,6 +670,7 @@ function Ui:SetFocusedRemote(Data)
 	--// Create new parser
 	local Module = Generation:NewParser()
 	local Parser = Module.Parser
+	Module.Formatter.ValueSwaps = ValueSwaps
 	
 	--// RemoteOptions
 	self:CreateOptionsForDict(Tab, RemoteData, function()

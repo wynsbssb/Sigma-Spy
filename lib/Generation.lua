@@ -1,16 +1,30 @@
-local Generation = {}
-
 type table = {
 	[any]: any
 }
 
+type RemoteData = {
+	Remote: Instance,
+	IsReceive: boolean?,
+	Args: table,
+	Method: string,
+    TransferType: string,
+	ValueReplacements: table
+}
+
+--// Module
+local Generation = {}
+
 --// Libraries
 local ParserModule = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main/main.lua'))()
+local Version = ParserModule.Version
+local ParserModules = ParserModule.Modules
 
---// Parser
+--// Configure Parser imports to use game:HttpGet
 function ParserModule:Import(Name: string)
 	local Url = `{self.ImportUrl}/{Name}.lua`
-	return loadstring(game:HttpGet(Url))()
+	local Content = game:HttpGet(Url)
+	local Closure = loadstring(Content, Name)
+	return Closure()
 end
 ParserModule:Load()
 
@@ -28,12 +42,18 @@ function Generation:Init(Configuration: table)
 	Hook = Modules.Hook
 end
 
+function Generation:MakeValueSwapsTable(): table
+	local Formatter = ParserModules.Formatter
+	return Formatter:MakeReplacements()
+end
+
 function Generation:SetSwapsCallback(Callback: (Interface: table) -> ())
 	self.SwapsCallback = Callback
 end
 
 function Generation:GetBase(Module): string
-	local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n\n"
+	local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
+	Code ..= `-- Running Parser version {Version}\n\n`
 
 	--// Generate variables code
 	Code ..= Module.Parser:MakeVariableCode({
@@ -59,18 +79,16 @@ function Generation:GetSwaps()
 	return Swaps
 end
 
-function Generation:PickVariableName()
+function Generation:PickVariableName(): string
 	local Names = Config.VariableNames
 	return Names[math.random(1, #Names)]
 end
 
 function Generation:NewParser()
 	local VariableName = self:PickVariableName()
-
-	--// Swaps
 	local Swaps = self:GetSwaps()
 
-	--// Load parser module
+	--// Create new parser instance
 	local Module = ParserModule:New({
 		VariableBase = VariableName,
 		Swaps = Swaps,
@@ -82,18 +100,14 @@ function Generation:NewParser()
 	return Module
 end
 
-type RemoteScript = {
-	Remote: Instance,
-	IsReceive: boolean?,
-	Args: table,
-	Method: string
-}
-function Generation:RemoteScript(Module, Data: RemoteScript): string
+function Generation:RemoteScript(Module, Data: RemoteData): string
+	--// Unpack data
 	local Remote = Data.Remote
 	local IsReceive = Data.IsReceive
 	local Args = Data.Args
 	local Method = Data.Method
 
+	--// Remote info
 	local ClassName = Hook:Index(Remote, "ClassName")
 	local IsNilParent = Hook:Index(Remote, "Parent") == nil
 	
@@ -117,7 +131,7 @@ function Generation:RemoteScript(Module, Data: RemoteScript): string
 		}),
 		Comment = IsNilParent and "Remote parent is nil" or ClassName,
 		Lookup = Remote,
-		Name = Formatter:MakeName(Remote), --ClassName,
+		Name = Formatter:MakeName(Remote),
 		Class = "Remote"
 	})
 
