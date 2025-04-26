@@ -670,7 +670,8 @@ function Ui:SetFocusedRemote(Data)
 	--// Create new parser
 	local Module = Generation:NewParser()
 	local Parser = Module.Parser
-	Module.Formatter.ValueSwaps = ValueSwaps
+	local Formatter = Module.Formatter
+	Formatter:SetValueSwaps(ValueSwaps)
 	
 	--// RemoteOptions
 	self:CreateOptionsForDict(Tab, RemoteData, function()
@@ -875,8 +876,7 @@ function Ui:CreateLog(Data: Log)
     if RemoteData.Excluded then return end
 
 	--// Deep clone data
-	local ArgsLength = table.maxn(Args)
-	local ClonedArgs = DeepCloneTable({unpack(Args, 1, ArgsLength)})
+	local ClonedArgs = DeepCloneTable(Args)
 	Data.Args = ClonedArgs
 
 	--// Generate log title

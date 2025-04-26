@@ -7,7 +7,7 @@ type table = {
 	[any]: any
 }
 
-type MetaCallback = (Instance, ...any)->...any
+type MetaCallback = (Instance, ...any) -> ...any
 
 --// Modules
 local Process
@@ -227,8 +227,6 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 		}
 	}
 
-	print("ChannelId:", ChannelId, "...:", ...)
-	
 	--// Communication configuration
 	local Channel = Communication:GetChannel(ChannelId)
 	Communication:Init(InitData)

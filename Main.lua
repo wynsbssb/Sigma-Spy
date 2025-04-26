@@ -22,7 +22,8 @@ local Parameters = {...}
 local Overwrites = Parameters[1]
 local Configuration = {
 	UseWorkspace = false, 
-	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main"
+	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main",
+	ParserUrl = "https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main"
 }
 
 --// Load overwrites
@@ -102,7 +103,8 @@ ActorCode ..= [=[
 --// Load modules
 Files:LoadModules(Modules, {
 	Modules = Modules,
-	Services = Services
+	Services = Services,
+	Configuration = Configuration
 })
 
 --// ReGui Create window
@@ -143,8 +145,6 @@ local ChannelId = Communication:CreateChannel()
 Communication:AddCommCallback("QueueLog", function(...)
 	Ui:QueueLog(...)
 end)
-
-print("ChannelId", ChannelId)
 
 --// Begin hook
 Hook:BeginService(Modules, nil, ChannelId) -- Run on self

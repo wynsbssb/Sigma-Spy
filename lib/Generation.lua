@@ -14,36 +14,44 @@ type RemoteData = {
 --// Module
 local Generation = {}
 
---// Libraries
-local ParserModule = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main/main.lua'))()
-local Version = ParserModule.Version
-local ParserModules = ParserModule.Modules
-
---// Configure Parser imports to use game:HttpGet
-function ParserModule:Import(Name: string)
-	local Url = `{self.ImportUrl}/{Name}.lua`
-	local Content = game:HttpGet(Url)
-	local Closure = loadstring(Content, Name)
-	return Closure()
-end
-ParserModule:Load()
-
 --// Modules
 local Config
 local Hook
-
+local ParserModule
 local ThisScript = script
 
-function Generation:Init(Configuration: table)
-    local Modules = Configuration.Modules
+function Generation:Init(Data: table)
+    local Modules = Data.Modules
+	local Configuration = Data.Configuration
 
 	--// Modules
 	Config = Modules.Config
 	Hook = Modules.Hook
+	
+	--// Import parser
+	local ParserUrl = Configuration.ParserUrl
+	self:LoadParser(ParserUrl)
+end
+
+function Generation:LoadParser(ImportUrl: string)
+	local MainPath = `{ImportUrl}/main.lua`
+	local MainContent = game:HttpGet(MainPath)
+	ParserModule = loadstring(MainContent, "Parser")()
+	
+	--// Configure Parser imports to use game:HttpGet
+	function ParserModule:Import(Name: string)
+		local Url = `{ImportUrl}/{Name}.lua`
+		local Content = game:HttpGet(Url)
+		local Closure = loadstring(Content, Name)
+		return Closure()
+	end
+
+	--// Load parser module
+	ParserModule:Load()
 end
 
 function Generation:MakeValueSwapsTable(): table
-	local Formatter = ParserModules.Formatter
+	local Formatter = ParserModule.Modules.Formatter
 	return Formatter:MakeReplacements()
 end
 
@@ -52,6 +60,7 @@ function Generation:SetSwapsCallback(Callback: (Interface: table) -> ())
 end
 
 function Generation:GetBase(Module): string
+	local Version = ParserModule.Version
 	local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
 	Code ..= `-- Running Parser version {Version}\n\n`
 
