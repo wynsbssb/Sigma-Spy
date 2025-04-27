@@ -99,7 +99,6 @@ ActorCode ..= [=[
 	}
 	Libraries.Hook:BeginService(Libraries, ExtraData, ...)
 ]=]
-writefile("ActorCode.lua", ActorCode)
 
 --// Load modules
 Files:LoadModules(Modules, {
