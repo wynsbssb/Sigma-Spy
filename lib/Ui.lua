@@ -70,6 +70,7 @@ local Generation
 local Process
 local Hook 
 local Config
+local Communication
 
 local ActiveData = nil
 local RemotesCount = 0
@@ -83,6 +84,25 @@ local function DeepCloneTable(Table)
 		New[Key] = typeof(Value) == "table" and DeepCloneTable(Value) or Value
 	end
 	return New
+end
+
+function Ui:Init(Data)
+    local Modules = Data.Modules
+	local Services = Data.Services
+
+	--// Services
+	InsertService = Services.InsertService
+
+	--// Modules
+	Flags = Modules.Flags
+	Generation = Modules.Generation
+	Process = Modules.Process
+	Hook = Modules.Hook
+	Config = Modules.Config
+	Communication = Modules.Communication
+
+	--// ReGui
+	self:LoadReGui()
 end
 
 function Ui:SetClipboard(Content: string)
@@ -135,24 +155,6 @@ function Ui:LoadReGui()
 	ReGui:Init({
 		Prefabs = InsertService:LoadLocalAsset(PrefabsId)
 	})
-end
-
-function Ui:Init(Data)
-    local Modules = Data.Modules
-	local Services = Data.Services
-
-	--// Services
-	InsertService = Services.InsertService
-
-	--// Modules
-	Flags = Modules.Flags
-	Generation = Modules.Generation
-	Process = Modules.Process
-	Hook = Modules.Hook
-	Config = Modules.Config
-
-	--// ReGui
-	self:LoadReGui()
 end
 
 type CreateButtons = {
@@ -468,7 +470,6 @@ function Ui:MakeEditorTab(InfoSelector)
 		WindowClass = Window,
 		Class = {
 			--Border = true,
-			--Size = UDim2.fromScale(0.75, 0.4)
 			Fill = true,
 			Active = true,
 			Parent = EditorTab:GetObject(),
@@ -878,6 +879,9 @@ function Ui:CreateLog(Data: Log)
 
     --// Excluded check
     if RemoteData.Excluded then return end
+
+	--// Deserialize arguments
+	Args = Communication:DeserializeTable(Args)
 
 	--// Deep clone data
 	local ClonedArgs = DeepCloneTable(Args)

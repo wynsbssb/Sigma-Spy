@@ -1,3 +1,7 @@
+type table = {
+    [any]: any
+}
+
 --// Debug ID interface
 local DebugIdRemote = Instance.new("BindableFunction")
 
@@ -21,6 +25,50 @@ end
 function Module:Init(Data)
     local Modules = Data.Modules
     Hook = Modules.Hook
+end
+
+function Module:CheckValue(Value, Inbound: boolean?)
+     --// No serializing  needed
+    if typeof(Value) ~= "table" then return Value end
+   
+    --// Deserialize
+    if Inbound then
+        return self:DeserializeTable(Value)
+    end
+
+    --// Serialize
+    return self:SerializeTable(Value)
+end
+
+function Module:MakePacket(Index, Value): table
+    return {
+        Index = self:CheckValue(Index), 
+        Value = self:CheckValue(Value)
+    }
+end
+
+function Module:ReadPacket(Packet: table): (any, any)
+    local Key = self:CheckValue(Packet.Index, true)
+    local Value = self:CheckValue(Packet.Value, true)
+    return Key, Value
+end
+
+function Module:SerializeTable(Table: table): table
+    local Serialized = {}
+    for Index, Value in next, Table do
+        local Packet = self:MakePacket(Index, Value)
+        table.insert(Serialized, Packet)
+    end
+    return Serialized
+end
+
+function Module:DeserializeTable(Serialized: table): table
+    local Table = {}
+    for _, Packet in next, Serialized do
+        local Index, Value = self:ReadPacket(Packet)
+        Table[Index] = Value
+    end
+    return Table
 end
 
 function Module:SetChannel(NewChannel: number)
@@ -66,6 +114,20 @@ end
 function Module:AddConnection(Callback): RBXScriptConnection
     local Event = self:ChannelIndex(Channel, "Event")
     return Event:Connect(Callback)
+end
+
+function Module:AddTypeCallback(Type: string, Callback): RBXScriptConnection
+    local Event = self:ChannelIndex(Channel, "Event")
+    return Event:Connect(function(RecivedType: string, ...)
+        if RecivedType ~= Type then return end
+        Callback(...)
+    end)
+end
+
+function Module:AddTypeCallbacks(Types: table)
+    for Type: string, Callback in next, Types do
+        self:AddTypeCallback(Type, Callback)
+    end
 end
 
 function Module:AddDefaultCallbacks(Event: BindableEvent)

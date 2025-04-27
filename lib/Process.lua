@@ -71,7 +71,6 @@ local Process = {
 local Hook
 local Communication
 local ReturnSpoofs
-local Generation
 local Ui
 
 --// Communication channel
@@ -96,7 +95,6 @@ function Process:Init(Data)
     Hook = Modules.Hook
     Communication = Modules.Communication
     ReturnSpoofs = Modules.ReturnSpoofs
-    Generation = Modules.Generation
 end
 
 function Process:PushConfig(Overwrites)
@@ -243,7 +241,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
         Id = Id,
 		ClassData = ClassData,
         Timestamp = Timestamp,
-        Args = {...}
+        Args = Communication:SerializeTable({...})
     })
 
     --// Invoke the Remote and log return values
@@ -256,7 +254,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     return ReturnValues
 end
 
-function Process:UpdateAllRemoteData(Key: string, Value)
+function Process:SetAllRemoteData(Key: string, Value)
     local RemoteOptions = self.RemoteOptions
 	for RemoteID, Data in next, RemoteOptions do
 		Data[Key] = Value
@@ -289,6 +287,10 @@ end
 
 function Process:UpdateRemoteData(Id: string, RemoteData: table)
     Communication:Communicate("RemoteData", Id, RemoteData)
+end
+
+function Process:UpdateAllRemoteData(Key: string, Value)
+    Communication:Communicate("AllRemoteData", Key, Value)
 end
 
 return Process

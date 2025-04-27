@@ -33,7 +33,6 @@ local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaC
 	end))
 	return OriginalFunc
 end
-
 local function HookFunction(Func: (...any) -> ...any, Callback: (...any) -> ...any)
 	local OriginalFunc
 	OriginalFunc = hookfunction(Func, function(...)
@@ -223,10 +222,14 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 	local Channel = Communication:GetChannel(ChannelId)
 	Communication:Init(InitData)
 	Communication:SetChannel(Channel)
-	Communication:AddConnection(function(Type: string, Id: string, RemoteData)
-		if Type ~= "RemoteData" then return end
-		ProcessLib:SetRemoteData(Id, RemoteData)
-	end)
+	Communication:AddTypeCallbacks({
+		["RemoteData"] = function(Id: string, RemoteData)
+			ProcessLib:SetRemoteData(Id, RemoteData)
+		end,
+		["AllRemoteData"] = function(Key: string, Value)
+			ProcessLib:SetAllRemoteData(Key, Value)
+		end,
+	})
 	
 	--// Process configuration
 	ProcessLib:Init(InitData)
