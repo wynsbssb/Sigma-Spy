@@ -211,7 +211,9 @@ function Process:Callback(Data: RemoteData, ...): table?
     if not OriginalFunc then return end
 
     --// Invoke orignal function
-    return {OriginalFunc(Remote, ...)}
+    return {
+        OriginalFunc(Remote, ...)
+    }
 end
 
 function Process:ProcessRemote(Data: RemoteData, ...): table?
@@ -226,7 +228,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Fetch details
     local Id = Communication:GetDebugId(Remote)
     local ClassData = self:GetClassData(Remote)
-    local ValueSwaps = Generation:MakeValueSwapsTable()
+    local Timestamp = tick()
 
     --// Add extra data into the log if needed
     local ExtraData = self.ExtraData
@@ -237,10 +239,10 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Add to queue
     Merge(Data, {
 		CallingScript = getcallingscript(),
-		CallingFunction = self:FindCallingLClosure(5),
+		CallingFunction = self:FindCallingLClosure(6),
         Id = Id,
 		ClassData = ClassData,
-        ValueSwaps = ValueSwaps,
+        Timestamp = Timestamp,
         Args = {...}
     })
 

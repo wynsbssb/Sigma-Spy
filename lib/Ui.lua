@@ -1,5 +1,6 @@
 local Ui = {
 	DefaultEditorContent = "--Welcome to Sigma Spy",
+	LogLimit = 100,
 
     SeasonLabels = { 
         January = "⛄%s⛄", 
@@ -48,7 +49,9 @@ type Log = {
 	RemoteData: table?,
 	Id: string,
 	Selectable: table,
-	HeaderData: table
+	HeaderData: table,
+	ValueSwaps: table,
+	Timestamp: number
 }
 
 --// Compatibility
@@ -849,6 +852,7 @@ function Ui:CreateLog(Data: Log)
     local Args = Data.Args
     local IsReceive = Data.IsReceive
 	local Id = Data.Id
+	local Timestamp = Data.Timestamp
 	
 	local IsNilParent = Hook:Index(Remote, "Parent") == nil
 	local RemoteData = Process:GetRemoteData(Id)
@@ -878,6 +882,7 @@ function Ui:CreateLog(Data: Log)
 	--// Deep clone data
 	local ClonedArgs = DeepCloneTable(Args)
 	Data.Args = ClonedArgs
+	Data.ValueSwaps = Generation:MakeValueSwapsTable(Timestamp)
 
 	--// Generate log title
 	local Color = Config.MethodColors[Method:lower()]

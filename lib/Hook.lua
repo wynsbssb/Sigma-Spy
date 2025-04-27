@@ -12,42 +12,34 @@ type MetaCallback = (Instance, ...any) -> ...any
 --// Modules
 local Process
 
+local function HookMiddle(OriginalFunc, Callback, ...)
+	--// Invoke callback and check for a reponce otherwise ignored
+	local ReturnValues = Callback(...)
+	if ReturnValues then
+		local Length = table.maxn(ReturnValues)
+		return unpack(ReturnValues, 1, Length)
+	end
+
+	--// Invoke orignal function
+	return OriginalFunc(...)
+end
+
 --// This is a custom hookmetamethod function, feel free to replace with your own
 --// The callback is expected to return a nil value sometimes which should be ingored
 local function HookMetaMethod(self, Call: string, Callback: MetaCallback): MetaCallback
-	local CallbackC = newcclosure(Callback)
 	local OriginalFunc
-
-	--// Hook metamethod call
 	OriginalFunc = hookmetamethod(self, Call, newcclosure(function(...)
-		--// Invoke callback and check for a reponce otherwise ignored
-		local ReturnValues = CallbackC(...)
-		if ReturnValues then
-			local Length = table.maxn(ReturnValues)
-			return unpack(ReturnValues, 1, Length)
-		end
-
-		--// Invoke orignal function
-		return OriginalFunc(...)
+		return HookMiddle(OriginalFunc, Callback, ...)
 	end))
-
 	return OriginalFunc
 end
 
 local function HookFunction(Func: (...any) -> ...any, Callback: (...any) -> ...any)
 	local OriginalFunc
-
 	OriginalFunc = hookfunction(Func, function(...)
-		--// Invoke callback and check for a reponce otherwise ignored
-		local ReturnValues = Callback(...)
-		if ReturnValues then
-			local Length = table.maxn(ReturnValues)
-			return unpack(ReturnValues, 1, Length)
-		end
-
-		--// Invoke orignal function
-		return OriginalFunc(...)
+		return HookMiddle(OriginalFunc, Callback, ...)
 	end)
+	return OriginalFunc
 end
 
 --// Replace metatable function method, this can be a workaround on some games if hookmetamethod is detected
