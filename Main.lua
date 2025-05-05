@@ -139,5 +139,4 @@ Ui:BeginLogService()
 
 --// Load hooks
 local ActorCode = Files:MakeActorScript(Scripts, ChannelId)
-writefile("ActorCode.lua", ActorCode)
 Hook:LoadHooks(ActorCode, ChannelId)
