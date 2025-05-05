@@ -50,18 +50,18 @@ local Process = {
             Send = {
                 "Fire",
             },
-            Receive = {
-                "Event",
-            }
+            -- Receive = {
+            --     "Event",
+            -- }
         },
         ["BindableFunction"] = {
             IsRemoteFunction = true,
             Send = {
                 "Invoke",
             },
-            Receive = {
-                "OnInvoke",
-            }
+            -- Receive = {
+            --     "OnInvoke",
+            -- }
         }
     },
     RemoteOptions = {}
@@ -75,6 +75,7 @@ local Ui
 
 --// Communication channel
 local Channel
+local ChannelWrapped = false
 
 local function Merge(Base: table, New: table)
 	for Key, Value in next, New do
@@ -83,8 +84,9 @@ local function Merge(Base: table, New: table)
 end
 
 --// Communication
-function Process:SetChannelId(ChannelId: number)
-    Channel = Communication:GetChannel(ChannelId)
+function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
+    Channel = NewChannel
+    ChannelWrapped = IsWrapped
 end
 
 function Process:Init(Data)
@@ -107,10 +109,9 @@ end
 
 function Process:CheckIsSupported(): boolean
     local CoreFunctions = {
-        "create_comm_channel",
-        "get_comm_channel",
         "hookmetamethod",
         "getrawmetatable",
+        "hookfunction",
         "setreadonly"
     }
 
@@ -134,11 +135,18 @@ function Process:GetClassData(Remote: Instance): table?
     return RemoteClassData[ClassName]
 end
 
+function Process:IsProtectedRemote(Remote: Instance): boolean
+    local IsDebug = Remote == Communication.DebugIdRemote
+    local IsChannel = Remote == (ChannelWrapped and Channel.Channel or Channel)
+
+    return IsDebug or IsChannel
+end
+
 function Process:RemoteAllowed(Remote: Instance, TransferType: string, Method: string?): boolean?
     if typeof(Remote) ~= 'Instance' then return end
     
-    if Remote == Communication.DebugIdRemote then return end
-    if Remote == Channel then return end
+    --// Check if the Remote is protected
+    if self:IsProtectedRemote(Remote) then return end
 
     --// Fetch class table
 	local ClassData = self:GetClassData(Remote)
@@ -146,7 +154,7 @@ function Process:RemoteAllowed(Remote: Instance, TransferType: string, Method: s
 
     --// Check if the transfer type has data
 	local Allowed = ClassData[TransferType]
-	if not Allowed then return warn("TransferType not Allowed") end
+	if not Allowed then return end
 
     --// Check if the method is allowed
 	if Method then
@@ -161,14 +169,21 @@ function Process:SetExtraData(Data: table)
     self.ExtraData = Data
 end
 
-function Process:GetRemoteSpoof(Remote: Instance, Method: string)
+function Process:GetRemoteSpoof(Remote: Instance, Method: string, ...)
     local Spoof = ReturnSpoofs[Remote]
 
     if not Spoof then return end
     if Spoof.Method ~= Method then return end
 
+    local ReturnValues = Spoof.Return
+
+    --// Call the ReturnValues function type
+    if typeof(ReturnValues) == "function" then
+        ReturnValues = ReturnValues(...)
+    end
+
 	Communication:Warn("Spoofed", Method)
-	return {Spoof.Return}
+	return ReturnValues
 end
 
 function Process:FindCallingLClosure(Offset: number)
@@ -202,7 +217,7 @@ function Process:Callback(Data: RemoteData, ...): table?
     if RemoteData.Blocked then return {} end
 
     --// Check for a spoof
-    local Spoof = self:GetRemoteSpoof(Remote, Method)
+    local Spoof = self:GetRemoteSpoof(Remote, Method, OriginalFunc, ...)
     if Spoof then return Spoof end
 
     --// Check if the orignal function was passed

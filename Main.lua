@@ -1,6 +1,6 @@
 --[[
-	⣿⣿⣿⣿⣿⣿SIGMA SPY⣿⣿⣿⣿⣿⣿
-	⣿⣿⣯⡉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠁
+	⣿⣿⣿⣿⣿ SIGMA SPY ⣿⣿⣿⣿⣿
+	⣿⣿⣯⡉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉
 	⠉⠻⣿⣿⣦⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 	⠀⠀⠈⠻⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 	⠀⠀⠀⠀⠀⠙⢿⣿⣿⣦⡀⠀⠀⠀⠀⠀⠀⠀⠀
@@ -8,26 +8,27 @@
 	⠀⠀⠀⠀⠀⣠⣾⣿⣿⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀
 	⠀⠀⢀⣴⣿⣿⡿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 	⣀⣴⣿⣿⠟⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-	⣿⣿⣟⣁⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀
-	⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡇
+	⣿⣿⣟⣁⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀
+	⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿
 
-    Written by @depso
+    Written by @depso (depthso)
     MIT License
     
     https://github.com/depthso
 ]]
 
 --// Base Configuration
-local Parameters = {...}
-local Overwrites = Parameters[1]
 local Configuration = {
 	UseWorkspace = false, 
+	NoActors = false,
 	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main",
 	ParserUrl = "https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main"
 }
 
 --// Load overwrites
-if Overwrites then
+local Parameters = {...}
+local Overwrites = Parameters[1]
+if typeof(Overwrites) == "table" then
 	for Key, Value in Overwrites do
 		Configuration[Key] = Value
 	end
@@ -61,6 +62,7 @@ local Scripts = {
 	--// User configurations
 	Config = Files:GetModule("Sigma Spy/Config", "Config"),
 	ReturnSpoofs = Files:GetModule("Sigma Spy/Return spoofs", "Return Spoofs"),
+	Configuration = Configuration,
 
 	--// Libraries
 	Process = Files:GetModule("lib/Process"),
@@ -78,33 +80,19 @@ local Players: Players = Services.Players
 local Modules = Files:LoadLibraries(Scripts)
 local Process = Modules.Process
 local Hook = Modules.Hook
-local Config = Modules.Config
 local Ui = Modules.Ui
 local Generation = Modules.Generation
 local Communication = Modules.Communication
-
---// Unpack config
-local BlackListedServices = Config.BlackListedServices
 
 --// Use custom font (optional)
 local FontContent = Files:GetAsset("ProggyClean.ttf", true)
 local FontJsonFile = Files:CreateFont("ProggyClean", FontContent)
 Ui:SetFont(FontJsonFile, FontContent)
 
---// Actor code
-local ActorCode = Files:CompileModule(Scripts)
-ActorCode ..= [=[
-	local ExtraData = {
-		IsActor = true
-	}
-	Libraries.Hook:BeginService(Libraries, ExtraData, ...)
-]=]
-
 --// Load modules
 Files:LoadModules(Modules, {
 	Modules = Modules,
-	Services = Services,
-	Configuration = Configuration
+	Services = Services
 })
 
 --// ReGui Create window
@@ -116,6 +104,12 @@ if not Supported then
 	Window:Close()
 	return
 end
+
+--// Create communication channel
+local ChannelId = Communication:CreateChannel()
+Communication:AddCommCallback("QueueLog", function(...)
+	Ui:QueueLog(...)
+end)
 
 --// Generation swaps
 local LocalPlayer = Players.LocalPlayer
@@ -140,29 +134,10 @@ Ui:ShowModal({
 --// Create window content
 Ui:CreateWindowContent(Window)
 
---// Create communication channel
-local ChannelId = Communication:CreateChannel()
-Communication:AddCommCallback("QueueLog", function(...)
-	Ui:QueueLog(...)
-end)
-
---// Begin hook
-Hook:BeginService(Modules, nil, ChannelId) -- Run on self
-Hook:RunOnActors(ActorCode, ChannelId) -- Run on actors
-
---// Remote added
-game.DescendantAdded:Connect(function(Remote) -- TODO
-	Hook:ConnectClientRecive(Remote)
-end)
-
---// Collect missing remotes
-Hook:MultiConnect(getnilinstances())
-
---// Search for remotes
-for _, Service in next, game:GetChildren() do
-	if table.find(BlackListedServices, Service.ClassName) then continue end
-	Hook:MultiConnect(Service:GetDescendants())
-end
-
 --// Begin the Log queue service
 Ui:BeginLogService()
+
+--// Load hooks
+local ActorCode = Files:MakeActorScript(Scripts, ChannelId)
+writefile("ActorCode.lua", ActorCode)
+Hook:LoadHooks(ActorCode, ChannelId)

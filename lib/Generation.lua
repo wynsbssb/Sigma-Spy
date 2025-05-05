@@ -22,7 +22,7 @@ local ThisScript = script
 
 function Generation:Init(Data: table)
     local Modules = Data.Modules
-	local Configuration = Data.Configuration
+	local Configuration = Modules.Configuration
 
 	--// Modules
 	Config = Modules.Config
@@ -62,7 +62,7 @@ end
 function Generation:GetBase(Module): string
 	local Version = ParserModule.Version
 	local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
-	Code ..= `-- Running Parser version {Version}\n\n`
+	Code ..= `-- Parser version {Version}\n\n`
 
 	--// Generate variables code
 	Code ..= Module.Parser:MakeVariableCode({
@@ -138,7 +138,7 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 		Value = Formatter:Format(Remote, {
 			NoVariableCreate = true
 		}),
-		Comment = IsNilParent and "Remote parent is nil" or ClassName,
+		Comment = `{ClassName} {IsNilParent and " | Remote parent is nil" or ""}`,
 		Lookup = Remote,
 		Name = Formatter:MakeName(Remote),
 		Class = "Remote"
@@ -202,6 +202,81 @@ function Generation:TableScript(Table: table)
 	Code ..= `\nreturn {ParsedTable}`
 
 	return Code
+end
+
+function Generation:MakeTypesTable(Table: table): table
+	local Types = {}
+
+	for Key, Value in next, Table do
+		local Type = typeof(Value)
+		if Type == "table" then
+			Type = self:MakeTypesTable(Value)
+		end
+
+		Types[Key] = Type
+	end
+
+	return Types
+end
+
+function Generation:ConnectionInfo(Remote: Instance, ClassData: table): table
+	local ReceiveMethods = ClassData.Receive
+	if not ReceiveMethods then return end
+
+	local Connections = {}
+	for _, Method: string in next, ReceiveMethods do
+		pcall(function() -- TODO: GETCALLBACKVALUE
+			local Signal = Hook:Index(Remote, Method)
+			Connections[Method] = self:ConnectionsTable(Signal)
+		end)
+	end
+
+	return Connections
+end
+
+function Generation:AdvancedInfo(Data: table): string
+	--// Unpack remote data
+	local MetaMethod = Data.MetaMethod
+	local Function = Data.CallingFunction
+	local ClassData = Data.ClassData
+	local Method = Data.Method
+	local Remote = Data.Remote
+	local Script = Data.CallingScript
+	local Id = Data.Id
+	local Args = Data.Args
+
+	--// Unpack info
+	local SourceScript = rawget(getfenv(Function), "script")
+
+	--// Advanced info table base
+	local FunctionInfo = {
+		["Caller"] = {
+			["SourceScript"] = SourceScript,
+			["CallingScript"] = Script,
+			["CallingFunction"] = Function
+		},
+		["Remote"] = {
+			["Remote"] = Remote,
+			["RemoteID"] = Id,
+			["Method"] = Method,
+			["Connections"] = self:ConnectionInfo(Remote, ClassData)
+		},
+		["Arguments"] = {
+			["Length"] = #Args,
+			["Types"] = self:MakeTypesTable(Args),
+		},
+		["MetaMethod"] = MetaMethod,
+		["IsActor"] = Data.IsActor,
+	}
+
+	--// Some closures may not be lua
+	if islclosure(Function) then
+		FunctionInfo["UpValues"] = debug.getupvalues(Function)
+		FunctionInfo["Constants"] = debug.getconstants(Function)
+	end
+
+	--// Generate script
+	return self:TableScript(FunctionInfo)
 end
 
 return Generation

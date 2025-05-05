@@ -1,6 +1,9 @@
 local Ui = {
-	DefaultEditorContent = "--Welcome to Sigma Spy",
-	LogLimit = 100,
+	DefaultEditorContent = [=[--[[ 
+	Welcome to Sigma Spy
+	Created by depso!
+]] ]=],
+	LogLimit = 200,
 
     SeasonLabels = { 
         January = "⛄%s⛄", 
@@ -456,9 +459,9 @@ function Ui:MakeEditorTab(InfoSelector)
 		Editable = false,
 		FontSize = 13,
 		Colors = SyntaxColors,
-		FontFace = TextFont,
-		Text = Default
+		FontFace = TextFont
 	})
+	CodeEditor:SetText(Default)
 	
 	local EditorTab = InfoSelector:CreateTab({
 		Name = "Editor"
@@ -499,11 +502,11 @@ function Ui:MakeEditorTab(InfoSelector)
 				Callback = MakeActiveDataCallback("GetReturn")
 			},
 			{
-				Text = "Generate info",
+				Text = "Get info",
 				Callback = MakeActiveDataCallback("GenerateInfo")
 			},
 			{
-				Text = "Decompile script",
+				Text = "Decompile source",
 				Callback = MakeActiveDataCallback("Decompile")
 			}
 		}
@@ -519,7 +522,6 @@ function Ui:SetFocusedRemote(Data)
 		"Method",
 		"Remote",
 		"CallingScript",
-		"CallingActor",
 		"IsActor",
 		"Id"
 	}
@@ -527,10 +529,8 @@ function Ui:SetFocusedRemote(Data)
 	--// Unpack remote data
 	local Remote = Data.Remote
 	local Method = Data.Method
-	local MetaMethod = Data.MetaMethod
 	local IsReceive = Data.IsReceive
 	local Script = Data.CallingScript
-	local Function = Data.CallingFunction
 	local ClassData = Data.ClassData
 	local HeaderData = Data.HeaderData
 	local ValueSwaps = Data.ValueSwaps
@@ -539,7 +539,6 @@ function Ui:SetFocusedRemote(Data)
 
 	--// Unpack info
 	local RemoteData = Process:GetRemoteData(Id)
-	local SourceScript = rawget(getfenv(Function), "script")
 	local IsRemoteFunction = ClassData.IsRemoteFunction
 
 	--// UI data
@@ -565,6 +564,8 @@ function Ui:SetFocusedRemote(Data)
 	local function SetIDEText(...)
 		CodeEditor:SetText(...)
 	end
+
+	--// TODO: Add generate type checking
 
 	--// Functions
 	function Data:RepeatCall()
@@ -602,43 +603,9 @@ function Ui:SetFocusedRemote(Data)
 			SetIDEText(Script)
 			return 
 		end
-		
-		--// Tables 
-		-- TODO: Put ths in Generation library
-		local Connections = {}
-		local FunctionInfo = {
-			["Script"] = {
-				["SourceScript"] = SourceScript,
-				["CallingScript"] = Script
-			},
-			["Remote"] = {
-				["Remote"] = Remote,
-				["RemoteID"] = Id,
-				["Method"] = Method
-			},
-			["MetaMethod"] = MetaMethod,
-			["IsActor"] = Data.IsActor,
-			["CallingFunction"] = Function,
-			["Connections"] = Connections
-		}
-
-		--// Some closures may not be lua
-		if islclosure(Function) then
-			FunctionInfo["UpValues"] = debug.getupvalues(Function)
-			FunctionInfo["Constants"] = debug.getconstants(Function)
-		end
-		
-		--// Get remote connections
-		local ReceiveMethods = ClassData.Receive
-		for _, Method: string in next, ReceiveMethods do
-			pcall(function() -- TODO: GETCALLBACKVALUE
-				local Signal = Hook:Index(Remote, Method)
-				Connections[Method] = Generation:ConnectionsTable(Signal)
-			end)
-		end
 
 		--// Generate script
-		local Script = Generation:TableScript(FunctionInfo)
+		local Script = Generation:AdvancedInfo(Data)
 		SetIDEText(Script)
 	end
 	function Data:Decompile()
@@ -897,7 +864,8 @@ function Ui:CreateLog(Data: Log)
 	if FindString then
 		for _, Arg in next, ClonedArgs do
 			if typeof(Arg) == "string" then
-				Text = `{Arg:sub(1,15)} | {Text}`
+				local Value = Arg:sub(1,15):gsub("[\n\r]", "")
+				Text = `{Value} | {Text}`
 				break
 			end
 		end
