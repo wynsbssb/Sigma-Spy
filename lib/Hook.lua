@@ -70,6 +70,12 @@ function Hook:HookMetaCall(Object: Instance, Call: string, Callback: MetaCallbac
 end
 
 function Hook:HookMetaMethod(Object: Instance, Call: string, Callback: MetaCallback): MetaCallback
+	--// Getrawmetatable
+	if Config.ReplaceMetaCallFunc then
+		return self:ReplaceMetaMethod(Object, Call, Callback)
+	end
+	
+	--// Hookmetamethod
 	return self:HookMetaCall(Object, Call, Callback)
 end
 
@@ -140,10 +146,6 @@ function Hook:BeginHooks()
 end
 
 function Hook:Index(Object: Instance, Key: string)
-	-- local OrignalIndex = self.OrignalIndex
-	-- if OrignalIndex then
-	-- 	return OrignalIndex(Object, Key)
-	-- end
 	return Object[Key]
 end
 
@@ -178,8 +180,6 @@ function Hook:ConnectClientRecive(Remote)
 
 	--// Check if the Object has Remote class data
     local ClassData = Process:GetClassData(Remote)
-    if not ClassData then return end
-
     local IsRemoteFunction = ClassData.IsRemoteFunction
     local Method = ClassData.Receive[1]
 	local PreviousFunction = nil
@@ -266,7 +266,10 @@ function Hook:LoadMetaHooks(ActorCode: string, ChannelId: number)
 end
 
 function Hook:LoadReceiveHooks()
+	local NoReceiveHooking = Config.NoReceiveHooking
 	local BlackListedServices = Config.BlackListedServices
+
+	if NoReceiveHooking then return end
 
 	--// Remote added
 	game.DescendantAdded:Connect(function(Remote) -- TODO

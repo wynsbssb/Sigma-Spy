@@ -138,7 +138,7 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 		Value = Formatter:Format(Remote, {
 			NoVariableCreate = true
 		}),
-		Comment = `{ClassName} {IsNilParent and " | Remote parent is nil" or ""}`,
+		Comment = `{ClassName} {IsNilParent and "| Remote parent is nil" or ""}`,
 		Lookup = Remote,
 		Name = Formatter:MakeName(Remote),
 		Class = "Remote"

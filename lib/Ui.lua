@@ -431,10 +431,10 @@ function Ui:MakeOptionsTab(InfoSelector)
 end
 
 function Ui:AddDetailsSection(OptionsTab)
-	OptionsTab:Separator({Text="Infomation"})
+	OptionsTab:Separator({Text="Information"})
 	OptionsTab:BulletText({
 		Rows = {
-			"Sigma spy - Created by depso!",
+			"Sigma spy - Written by depso!",
 			"Thank you to syn for your suggestions and testing",
 			"Boiiiiii what did you say about Sigma Spy 💀💀 (+999999 AURA)"
 		}
@@ -686,7 +686,7 @@ function Ui:SetFocusedRemote(Data)
 		}
 	})
 
-	--// Remote infomation
+	--// Remote information
 	local Rows = {"Name", "Value"}
 	local DataTable = Tab:Table({
 		Border = true,
