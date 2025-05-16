@@ -83,12 +83,6 @@ local function Merge(Base: table, New: table)
 	end
 end
 
---// Communication
-function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
-    Channel = NewChannel
-    ChannelWrapped = IsWrapped
-end
-
 function Process:Init(Data)
     local Modules = Data.Modules
 
@@ -97,6 +91,23 @@ function Process:Init(Data)
     Hook = Modules.Hook
     Communication = Modules.Communication
     ReturnSpoofs = Modules.ReturnSpoofs
+end
+
+--// Communication
+function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
+    Channel = NewChannel
+    ChannelWrapped = IsWrapped
+end
+
+function Process:DeepCloneTable(Table, Ignore: table?)
+	local New = {}
+	for Key, Value in next, Table do
+        --// Check if the value is ignored
+        if Ignore and table.find(Ignore, Value) then continue end
+
+		New[Key] = typeof(Value) == "table" and self:DeepCloneTable(Value) or Value
+	end
+	return New
 end
 
 function Process:Unpack(Table: table)

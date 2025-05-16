@@ -124,12 +124,12 @@ Generation:SetSwapsCallback(function(self)
 end)
 
 --// Beta alert modal
-Ui:ShowModal({
-	"<b>Attention!</b>",
-	"Sigma Spy is in BETA, please expect issues\n",
-	"Report any issues to the Github page (depthso/Sigma-Spy)\n",
-	"Many thanks!"
-})
+-- Ui:ShowModal({
+-- 	"<b>Attention!</b>",
+-- 	"Sigma Spy is in BETA, please expect issues\n",
+-- 	"Report any issues to the Github page (depthso/Sigma-Spy)\n",
+-- 	"Many thanks!"
+-- })
 
 --// Create window content
 Ui:CreateWindowContent(Window)

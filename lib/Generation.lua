@@ -12,11 +12,14 @@ type RemoteData = {
 }
 
 --// Module
-local Generation = {}
+local Generation = {
+	DumpBaseName = "SigmaSpy-Dump %s.lua"
+}
 
 --// Modules
 local Config
 local Hook
+local Process
 local ParserModule
 local ThisScript = script
 
@@ -27,10 +30,23 @@ function Generation:Init(Data: table)
 	--// Modules
 	Config = Modules.Config
 	Hook = Modules.Hook
+	Process = Modules.Process
 	
 	--// Import parser
 	local ParserUrl = Configuration.ParserUrl
 	self:LoadParser(ParserUrl)
+end
+
+function Generation:WriteDump(Content: string): string
+	local DumpBaseName = self.DumpBaseName
+
+	local TimeStamp = os.date("%Y-%m-%d_%H-%M-%S")
+	local FilePath = DumpBaseName:format(TimeStamp)
+
+	--// Write to file
+	writefile(FilePath, Content)
+
+	return FilePath
 end
 
 function Generation:LoadParser(ImportUrl: string)
@@ -112,12 +128,37 @@ function Generation:NewParser()
 	return Module
 end
 
+type CallInfo = {
+	EmptyArgs: boolean,
+	Arguments: table,
+	RemoteVariable: string
+}
+function Generation:CallRemote(Data, Info: CallInfo): string
+	local IsReceive = Data.IsReceive
+	local Method = Data.Method
+
+	local EmptyArgs = Info.EmptyArgs
+	local Arguments = Info.Arguments
+	local RemoteVariable = Info.RemoteVariable
+
+	--// Firesignal script for client recieves
+	if IsReceive then
+		local Second = EmptyArgs and "" or `, {Arguments}`
+		local Signal = `{RemoteVariable}.{Method}`
+
+		local Code = `\n-- This data was received from the server`
+		Code ..= `firesignal({Signal}{Second})`
+		return Code
+	end
+	
+	--// Remote invoke script
+	return `{RemoteVariable}:{Method}({Arguments})`
+end
+
 function Generation:RemoteScript(Module, Data: RemoteData): string
 	--// Unpack data
 	local Remote = Data.Remote
-	local IsReceive = Data.IsReceive
 	local Args = Data.Args
-	local Method = Data.Method
 
 	--// Remote info
 	local ClassName = Hook:Index(Remote, "ClassName")
@@ -149,20 +190,13 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 
 	--// Make code
 	local Code = self:GetBase(Module)
+	local CallCode = self:CallRemote(Data, {
+		RemoteVariable = RemoteVariable,
+		EmptyArgs = ItemsCount == 0,
+		Arguments = ParsedArgs,
+	})
 	
-	--// Firesignal script for client recieves
-	if IsReceive then
-		local Second = ItemsCount == 0 and "" or `, {ParsedArgs}`
-		local Signal = `{RemoteVariable}.{Method}`
-
-		Code ..= `\n-- This data was received from the server`
-		Code ..= `\nfiresignal({Signal}{Second})`
-		return Code
-	end
-	
-	--// Remote invoke script
-	Code ..= `\n{RemoteVariable}:{Method}({ParsedArgs})`
-	return Code
+	return `{Code}\n{CallCode}`
 end
 
 function Generation:ConnectionsTable(Signal: RBXScriptSignal): table
@@ -221,7 +255,7 @@ function Generation:MakeTypesTable(Table: table): table
 	return Types
 end
 
-function Generation:ConnectionInfo(Remote: Instance, ClassData: table): table
+function Generation:ConnectionInfo(Remote: Instance, ClassData: table): table?
 	local ReceiveMethods = ClassData.Receive
 	if not ReceiveMethods then return end
 
@@ -279,6 +313,46 @@ function Generation:AdvancedInfo(Module, Data: table): string
 
 	--// Generate script
 	return self:TableScript(Module, FunctionInfo)
+end
+
+function Generation:DumpLogs(Logs: table): string
+	local BaseData
+	local Parsed = {
+		Remote = nil,
+		Calls = {}
+	}
+
+	--// Create new parser instance
+	local Module = Generation:NewParser()
+
+	for _, Data in Logs do
+		local Calls = Parsed.Calls
+		local Table = {
+			Args = Data.Args,
+			Timestamp = Data.Timestamp,
+			ReturnValues = Data.ReturnValues,
+			Method = Data.Method,
+			MetaMethod = Data.MetaMethod,
+			CallingScript = Data.CallingScript,
+		}
+
+		--// Append
+		table.insert(Calls, Table)
+
+		--// Set BaseData
+		if not BaseData then
+			BaseData = Data
+		end
+	end
+
+	--// Basedata merge
+	Parsed.Remote = BaseData.Remote
+
+	--// Compile and save
+	local Output = self:TableScript(Module, Parsed)
+	local FilePath = self:WriteDump(Output)
+	
+	return FilePath
 end
 
 return Generation

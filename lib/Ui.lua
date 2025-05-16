@@ -3,8 +3,7 @@ local Ui = {
 	Welcome to Sigma Spy
 	Created by depso!
 ]] ]=],
-	LogLimit = 200,
-
+	LogLimit = 100,
     SeasonLabels = { 
         January = "⛄%s⛄", 
         February = "🌨️%s🏂", 
@@ -12,7 +11,7 @@ local Ui = {
         April = "🐣%s✝️", 
         May = "🐝%s🌞", 
         June = "🪴%s🥕", 
-        July = "🌊%s🏖️", 
+        July = "🌊%s🌅", 
         August = "☀️%s🌞", 
         September = "🍁%s🍁", 
         October = "🎃%s🎃", 
@@ -91,14 +90,6 @@ local RemotesCount = 0
 
 local TextFont = Font.fromEnum(Enum.Font.Code)
 local FontSuccess = false
-
-local function DeepCloneTable(Table)
-	local New = {}
-	for Key, Value in next, Table do
-		New[Key] = typeof(Value) == "table" and DeepCloneTable(Value) or Value
-	end
-	return New
-end
 
 function Ui:Init(Data)
     local Modules = Data.Modules
@@ -549,26 +540,26 @@ function Ui:ShouldFocus(Tab): boolean
 	return InfoSelector:CompareTabs(ActiveTab, Tab)
 end
 
-function Ui:MakeRemoteTab(Title: string)
-	if not ActiveData then return end
+function Ui:RemovePreviousTab(Title: string): boolean
+	--// No previous tabs
+	if not ActiveData then 
+		return false 
+	end
 
 	--// TabSelector
 	local InfoSelector = self.InfoSelector
 
-	--// ActiveData
-	local Tab = ActiveData.Tab
-	local Selectable = ActiveData.Selectable
+	--// Previous elements
+	local PreviousTab = ActiveData.Tab
+	local PreviousSelectable = ActiveData.Selectable
 
 	--// Remove previous tab and set selectable focus
-	local TabFocused = self:ShouldFocus(Tab)
-	InfoSelector:RemoveTab(Tab)
-	Selectable:SetSelected(false)
+	local TabFocused = self:ShouldFocus(PreviousTab)
+	InfoSelector:RemoveTab(PreviousTab)
+	PreviousSelectable:SetSelected(false)
 
 	--// Create new tab
-	return InfoSelector:CreateTab({
-		Name = Title,
-		Focused = TabFocused
-	})
+	return TabFocused
 end
 
 function Ui:SetFocusedRemote(Data)
@@ -594,7 +585,12 @@ function Ui:SetFocusedRemote(Data)
 	local CodeEditor = self.CodeEditor
 	local ToDisplay = self.DisplayRemoteInfo
 	local InfoSelector = self.InfoSelector
-	local Tab = self:MakeRemoteTab(`Remote: {Remote}`)
+
+	local TabFocused = self:RemovePreviousTab()
+	local Tab = InfoSelector:CreateTab({
+		Name = `Remote: {Remote}`,
+		Focused = TabFocused
+	})
 
 	--// Create new parser
 	local Module = Generation:NewParser()
@@ -713,12 +709,14 @@ function Ui:SetFocusedRemote(Data)
 					ActiveData = nil
 				end,
 			},
-			-- {
-			-- 	Text = "Dump to file",
-			-- 	Callback = function()
-					
-			-- 	end,
-			-- }
+			{
+				Text = "Dump logs",
+				Callback = function()
+					local Logs = HeaderData.Entries
+					local FilePath = Generation:DumpLogs(Logs)
+					Ui:ShowModal({"Saved dump to", FilePath})
+				end,
+			}
 		}
 	})
 
@@ -765,7 +763,7 @@ function Ui:SetFocusedRemote(Data)
 end
 
 function Ui:GetRemoteHeader(Data: Log)
-	--// UI data
+	local LogLimit = self.LogLimit
 	local Logs = self.Logs
 	local RemotesList = self.RemotesList
 
@@ -782,7 +780,9 @@ function Ui:GetRemoteHeader(Data: Log)
 
 	--// Header data
 	local HeaderData = {	
-		LogCount = 0
+		LogCount = 0,
+		Data = Data,
+		Entries = {}
 	}
 
 	--// Increment treenode count
@@ -796,9 +796,24 @@ function Ui:GetRemoteHeader(Data: Log)
 		})
 	end
 
-	function HeaderData:LogAdded()
+	function HeaderData:CheckLimit()
+		local Entries = self.Entries
+		if #Entries < LogLimit then return end
+			
+		--// Get and remove last element
+		local Log = table.remove(Entries, 1)
+		Log.Selectable:Remove()
+	end
+
+	function HeaderData:LogAdded(Data)
 		--// Increment log count
 		self.LogCount += 1
+		self:CheckLimit()
+
+		--// Add entry
+		local Entries = self.Entries
+		table.insert(Entries, Data)
+		
 		return self
 	end
 
@@ -899,7 +914,7 @@ function Ui:CreateLog(Data: Log)
 	Args = Communication:DeserializeTable(Args)
 
 	--// Deep clone data
-	local ClonedArgs = DeepCloneTable(Args)
+	local ClonedArgs = Process:DeepCloneTable(Args)
 	Data.Args = ClonedArgs
 	Data.ValueSwaps = Generation:MakeValueSwapsTable(Timestamp)
 
@@ -920,11 +935,11 @@ function Ui:CreateLog(Data: Log)
 	end
 
 	--// Fetch HeaderData by the RemoteID used for stacking
-	local HeaderData = self:GetRemoteHeader(Data):LogAdded()
+	local Header = self:GetRemoteHeader(Data)
 	local RemotesList = self.RemotesList
 
-	local LogCount = HeaderData.LogCount
-	local TreeNode = HeaderData.TreeNode 
+	local LogCount = Header.LogCount
+	local TreeNode = Header.TreeNode 
 	local Parent = TreeNode or RemotesList
 
 	--// Increase log count - TreeNodes are in GetRemoteHeader function
@@ -934,7 +949,7 @@ function Ui:CreateLog(Data: Log)
 	end
 
     --// Create focus button
-	Data.HeaderData = HeaderData
+	Data.HeaderData = Header
 	Data.Selectable = Parent:Selectable({
 		Text = Text,
         LayoutOrder = -1 * LogCount,
@@ -944,6 +959,8 @@ function Ui:CreateLog(Data: Log)
 			self:SetFocusedRemote(Data)
 		end,
     })
+
+	Header:LogAdded(Data)
 end
 
 return Ui
