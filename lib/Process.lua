@@ -99,6 +99,11 @@ function Process:Init(Data)
     ReturnSpoofs = Modules.ReturnSpoofs
 end
 
+function Process:Unpack(Table: table)
+	local Length = table.maxn(Table)
+	return unpack(Table, 1, Length)
+end
+
 function Process:PushConfig(Overwrites)
     Merge(self, Overwrites)
 end

@@ -17,12 +17,14 @@ local CoreGui
 local Hook
 local Channel
 local Config
+local Process
 
 function Module:Init(Data)
     local Modules = Data.Modules
     local Services = Data.Services
 
     Hook = Modules.Hook
+    Process = Modules.Process
     Config = Modules.Config or Config
     CoreGui = Services.CoreGui
 end
@@ -34,8 +36,7 @@ end
 
 function CommWrapper:ProcessArguments(Arguments) 
     local Channel = self.Channel
-    local Length = table.maxn(Arguments)
-    Channel:Fire(unpack(Arguments, 1, Length))
+    Channel:Fire(Process:Unpack(Arguments))
 end
 
 function CommWrapper:ProcessQueue()

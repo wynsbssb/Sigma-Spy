@@ -52,6 +52,10 @@ local Module = {
             Value = false,
             Label = "No grouping"
         },
+        NoCodeGeneration = {
+            Value = false,
+            Label = "No generation"
+        },
     }
 }
 

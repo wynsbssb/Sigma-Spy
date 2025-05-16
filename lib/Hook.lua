@@ -24,17 +24,16 @@ function Hook:Init(Data)
 end
 
 --// The callback is expected to return a nil value sometimes which should be ingored
-local function HookMiddle(OriginalFunc, Callback, ...)
+local HookMiddle = newcclosure(function(OriginalFunc, Callback, ...)
 	--// Invoke callback and check for a reponce otherwise ignored
 	local ReturnValues = Callback(...)
 	if ReturnValues then
-		local Length = table.maxn(ReturnValues)
-		return unpack(ReturnValues, 1, Length)
+		return Process:Unpack(ReturnValues)
 	end
 
 	--// Invoke orignal function
 	return OriginalFunc(...)
-end
+end)
 
 --// getrawmetatable
 function Hook:ReplaceMetaMethod(Object: Instance, Call: string, Callback: MetaCallback): MetaCallback

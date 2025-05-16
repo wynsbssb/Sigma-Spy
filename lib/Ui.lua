@@ -19,13 +19,24 @@ local Ui = {
         November = "🍂%s🍂", 
         December = "🎄%s🎁"
     },
+	Scales = {
+		["Mobile"] = UDim2.fromOffset(480, 280),
+		["Desktop"] = UDim2.fromOffset(600, 400),
+	},
     BaseConfig = {
         Theme = "SigmaSpy",
-        Size = UDim2.fromOffset(600, 400),
         NoScroll = true,
     },
 	OptionTypes = {
 		boolean = "Checkbox",
+	},
+	DisplayRemoteInfo = {
+		"MetaMethod",
+		"Method",
+		"Remote",
+		"CallingScript",
+		"IsActor",
+		"Id"
 	},
 
     Window = nil,
@@ -105,7 +116,18 @@ function Ui:Init(Data)
 	Communication = Modules.Communication
 
 	--// ReGui
+	self:CheckScale()
 	self:LoadReGui()
+end
+
+function Ui:CheckScale()
+	local BaseConfig = self.BaseConfig
+	local Scales = self.Scales
+
+	local IsMobile = ReGui:IsMobileDevice()
+	local Device = IsMobile and "Mobile" or "Desktop"
+
+	BaseConfig.Size = Scales[Device]
 end
 
 function Ui:SetClipboard(Content: string)
@@ -435,8 +457,8 @@ function Ui:AddDetailsSection(OptionsTab)
 	OptionsTab:BulletText({
 		Rows = {
 			"Sigma spy - Written by depso!",
-			"Thank you to syn for your suggestions and testing",
-			"Boiiiiii what did you say about Sigma Spy 💀💀 (+999999 AURA)"
+			"Libraries: Roblox-Parser, Dear-ReGui",
+			"Thank you to syn for your suggestions and testing"
 		}
 	})
 end
@@ -515,17 +537,41 @@ function Ui:MakeEditorTab(InfoSelector)
 	self.CodeEditor = CodeEditor
 end
 
+function Ui:ShouldFocus(Tab): boolean
+	local InfoSelector = self.InfoSelector
+	local ActiveTab = InfoSelector.ActiveTab
+
+	--// If there is an empty tab
+	if not ActiveTab then
+		return true
+	end
+
+	return InfoSelector:CompareTabs(ActiveTab, Tab)
+end
+
+function Ui:MakeRemoteTab(Title: string)
+	if not ActiveData then return end
+
+	--// TabSelector
+	local InfoSelector = self.InfoSelector
+
+	--// ActiveData
+	local Tab = ActiveData.Tab
+	local Selectable = ActiveData.Selectable
+
+	--// Remove previous tab and set selectable focus
+	local TabFocused = self:ShouldFocus(Tab)
+	InfoSelector:RemoveTab(Tab)
+	Selectable:SetSelected(false)
+
+	--// Create new tab
+	return InfoSelector:CreateTab({
+		Name = Title,
+		Focused = TabFocused
+	})
+end
+
 function Ui:SetFocusedRemote(Data)
-	--// To display in the table
-	local Display = {
-		"MetaMethod",
-		"Method",
-		"Remote",
-		"CallingScript",
-		"IsActor",
-		"Id"
-	}
-	
 	--// Unpack remote data
 	local Remote = Data.Remote
 	local Method = Data.Method
@@ -537,45 +583,42 @@ function Ui:SetFocusedRemote(Data)
 	local Args = Data.Args
 	local Id = Data.Id
 
+	--// Flags
+	local NoCodeGeneration = Flags:GetFlagValue("NoCodeGeneration")
+
 	--// Unpack info
 	local RemoteData = Process:GetRemoteData(Id)
 	local IsRemoteFunction = ClassData.IsRemoteFunction
 
 	--// UI data
-	local InfoSelector = self.InfoSelector
 	local CodeEditor = self.CodeEditor
-	local TabFocused = false
-	
-	--// Remote previous remote tab
-	if ActiveData then
-		local Tab = ActiveData.Tab
-		local Selectable = ActiveData.Selectable
-		local ActiveTab = InfoSelector.ActiveTab
+	local ToDisplay = self.DisplayRemoteInfo
+	local InfoSelector = self.InfoSelector
+	local Tab = self:MakeRemoteTab(`Remote: {Remote}`)
 
-		TabFocused = InfoSelector:CompareTabs(ActiveTab, Tab)
-		InfoSelector:RemoveTab(Tab)
-		Selectable:SetSelected(false)
-	end
+	--// Create new parser
+	local Module = Generation:NewParser()
+	local Parser = Module.Parser
+	local Formatter = Module.Formatter
+	Formatter:SetValueSwaps(ValueSwaps)
 
 	--// Set this log to be selected
 	ActiveData = Data
+	Data.Tab = Tab
 	Data.Selectable:SetSelected(true)
 
 	local function SetIDEText(...)
 		CodeEditor:SetText(...)
 	end
 
-	--// TODO: Add generate type checking
-
 	--// Functions
 	function Data:RepeatCall()
 		local Signal = Hook:Index(Remote, Method)
-		local Length = table.maxn(Args)
 
 		if IsReceive then
-			firesignal(Signal, unpack(Args, 1, Length))
+			firesignal(Signal, Process:Unpack(Args))
 		else
-			Signal(Remote, unpack(Args, 1, Length))
+			Signal(Remote, Process:Unpack(Args))
 		end
 	end
 	function Data:GetReturn()
@@ -591,7 +634,7 @@ function Ui:SetFocusedRemote(Data)
 		end
 
 		--// Generate script
-		local Script = Generation:TableScript(ReturnValues)
+		local Script = Generation:TableScript(Module, ReturnValues)
 		SetIDEText(Script)
 	end
 	function Data:GenerateInfo()
@@ -605,7 +648,7 @@ function Ui:SetFocusedRemote(Data)
 		end
 
 		--// Generate script
-		local Script = Generation:AdvancedInfo(Data)
+		local Script = Generation:AdvancedInfo(Module, Data)
 		SetIDEText(Script)
 	end
 	function Data:Decompile()
@@ -630,19 +673,6 @@ function Ui:SetFocusedRemote(Data)
 
 		SetIDEText(Source)
 	end
-
-	--// Create remote details tab
-	local Tab = InfoSelector:CreateTab({
-		Name = `Remote: {Remote}`,
-		Focused = TabFocused
-	})
-	Data.Tab = Tab
-	
-	--// Create new parser
-	local Module = Generation:NewParser()
-	local Parser = Module.Parser
-	local Formatter = Module.Formatter
-	Formatter:SetValueSwaps(ValueSwaps)
 	
 	--// RemoteOptions
 	self:CreateOptionsForDict(Tab, RemoteData, function()
@@ -682,7 +712,13 @@ function Ui:SetFocusedRemote(Data)
 					HeaderData:Remove()
 					ActiveData = nil
 				end,
-			}
+			},
+			-- {
+			-- 	Text = "Dump to file",
+			-- 	Callback = function()
+					
+			-- 	end,
+			-- }
 		}
 	})
 
@@ -702,7 +738,7 @@ function Ui:SetFocusedRemote(Data)
 	end
 
 	--// Table layout
-	for RowIndex, Name in Display do
+	for RowIndex, Name in ToDisplay do
 		local Row = DataTable:Row()
 		
 		--// Create Columns
@@ -718,7 +754,13 @@ function Ui:SetFocusedRemote(Data)
 	end
 	
 	--// Generate script
-	local Parsed = Generation:RemoteScript(Module, Data)
+	local Parsed
+	if NoCodeGeneration then
+		Parsed = Generation:TableScript(Module, Args)
+	else
+		Parsed = Generation:RemoteScript(Module, Data)
+	end
+
 	SetIDEText(Parsed)
 end
 
@@ -813,6 +855,12 @@ function Ui:BeginLogService()
 	end)()
 end
 
+function Ui:FilterName(Name: string): string
+	local Trimmed = Name:sub(1, 15)
+	local Filtred = Trimmed:gsub("[\n\r]", "")
+	return Filtred
+end
+
 function Ui:CreateLog(Data: Log)
 	--// Unpack log data
     local Remote = Data.Remote
@@ -864,8 +912,8 @@ function Ui:CreateLog(Data: Log)
 	if FindString then
 		for _, Arg in next, ClonedArgs do
 			if typeof(Arg) == "string" then
-				local Value = Arg:sub(1,15):gsub("[\n\r]", "")
-				Text = `{Value} | {Text}`
+				local Filtred = self:FilterName(Arg)
+				Text = `{Filtred} | {Text}`
 				break
 			end
 		end
@@ -885,18 +933,16 @@ function Ui:CreateLog(Data: Log)
 		LogCount = RemotesCount
 	end
 
-    local function SetFocused()
-		self:SetFocusedRemote(Data)
-    end
-
     --// Create focus button
 	Data.HeaderData = HeaderData
 	Data.Selectable = Parent:Selectable({
 		Text = Text,
         LayoutOrder = -1 * LogCount,
-        Callback = SetFocused,
 		TextColor3 = Color,
-		TextXAlignment = Enum.TextXAlignment.Left
+		TextXAlignment = Enum.TextXAlignment.Left,
+		Callback = function()
+			self:SetFocusedRemote(Data)
+		end,
     })
 end
 

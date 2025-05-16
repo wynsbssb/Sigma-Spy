@@ -59,17 +59,20 @@ function Generation:SetSwapsCallback(Callback: (Interface: table) -> ())
 	self.SwapsCallback = Callback
 end
 
-function Generation:GetBase(Module): string
+function Generation:GetBase(Module): (string, boolean)
 	local Version = ParserModule.Version
 	local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
 	Code ..= `-- Parser version {Version}\n\n`
 
 	--// Generate variables code
-	Code ..= Module.Parser:MakeVariableCode({
+	local Variables = Module.Parser:MakeVariableCode({
 		"Services", "Variables", "Remote"
 	})
 
-	return Code
+	local NoVariables = Variables == ""
+	Code ..= Variables
+
+	return Code, NoVariables
 end
 
 function Generation:GetSwaps()
@@ -139,8 +142,8 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 			NoVariableCreate = true
 		}),
 		Comment = `{ClassName} {IsNilParent and "| Remote parent is nil" or ""}`,
-		Lookup = Remote,
 		Name = Formatter:MakeName(Remote),
+		Lookup = Remote,
 		Class = "Remote"
 	})
 
@@ -186,9 +189,7 @@ function Generation:ConnectionsTable(Signal: RBXScriptSignal): table
 	return DataArray
 end
 
-function Generation:TableScript(Table: table)
-	local Module = self:NewParser()
-
+function Generation:TableScript(Module, Table: table): string
 	--// Pre-render variables
 	Module.Variables:PrerenderVariables(Table, {"Instance"})
 
@@ -198,8 +199,9 @@ function Generation:TableScript(Table: table)
 	})
 
 	--// Generate script
-	local Code = self:GetBase(Module)
-	Code ..= `\nreturn {ParsedTable}`
+	local Code, NoVariables = self:GetBase(Module)
+	local Seperator = NoVariables and "" or "\n"
+	Code ..= `{Seperator}return {ParsedTable}`
 
 	return Code
 end
@@ -234,7 +236,7 @@ function Generation:ConnectionInfo(Remote: Instance, ClassData: table): table
 	return Connections
 end
 
-function Generation:AdvancedInfo(Data: table): string
+function Generation:AdvancedInfo(Module, Data: table): string
 	--// Unpack remote data
 	local MetaMethod = Data.MetaMethod
 	local Function = Data.CallingFunction
@@ -276,7 +278,7 @@ function Generation:AdvancedInfo(Data: table): string
 	end
 
 	--// Generate script
-	return self:TableScript(FunctionInfo)
+	return self:TableScript(Module, FunctionInfo)
 end
 
 return Generation
