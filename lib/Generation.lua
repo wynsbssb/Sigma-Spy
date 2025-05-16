@@ -7,7 +7,7 @@ type RemoteData = {
 	IsReceive: boolean?,
 	Args: table,
 	Method: string,
-    TransferType: string,
+    	TransferType: string,
 	ValueReplacements: table
 }
 
@@ -19,7 +19,6 @@ local Generation = {
 --// Modules
 local Config
 local Hook
-local Process
 local ParserModule
 local ThisScript = script
 
@@ -30,7 +29,6 @@ function Generation:Init(Data: table)
 	--// Modules
 	Config = Modules.Config
 	Hook = Modules.Hook
-	Process = Modules.Process
 	
 	--// Import parser
 	local ParserUrl = Configuration.ParserUrl
@@ -146,8 +144,8 @@ function Generation:CallRemote(Data, Info: CallInfo): string
 		local Second = EmptyArgs and "" or `, {Arguments}`
 		local Signal = `{RemoteVariable}.{Method}`
 
-		local Code = `\n-- This data was received from the server`
-		Code ..= `firesignal({Signal}{Second})`
+		local Code = `-- This data was received from the server`
+		Code ..= `\nfiresignal({Signal}{Second})`
 		return Code
 	end
 	
