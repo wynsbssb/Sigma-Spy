@@ -84,6 +84,7 @@ local Process
 local Hook 
 local Config
 local Communication
+local Files
 
 local ActiveData = nil
 local RemotesCount = 0
@@ -105,9 +106,11 @@ function Ui:Init(Data)
 	Hook = Modules.Hook
 	Config = Modules.Config
 	Communication = Modules.Communication
+	Files = Modules.Files
 
 	--// ReGui
 	self:CheckScale()
+	self:LoadFont()
 	self:LoadReGui()
 end
 
@@ -133,17 +136,23 @@ function Ui:TurnSeasonal(Text: string): string
     return Base:format(Text)
 end
 
-function Ui:SetFont(FontJsonFile: string, FontContent: string)
-	if not FontJsonFile then return end
+function Ui:LoadFont()
+	local FontFile = self.FontJsonFile
 
-	--// Check if the font downloaded successfully
-	FontSuccess = FontContent ~= ""
-	if not FontSuccess then return end
+	print("FontFile", FontFile, Files)
 
-	--// Load fontface
-	local AssetId = getcustomasset(FontJsonFile, false)
+	--// Get FontFace AssetId
+	local AssetId = Files:LoadCustomasset(FontFile)
+	if not AssetId then return end
+
+	--// Create custom FontFace
 	local NewFont = Font.new(AssetId)
 	TextFont = NewFont
+	FontSuccess = true
+end
+
+function Ui:SetFontFile(FontFile: string)
+	self.FontJsonFile = FontFile
 end
 
 function Ui:FontWasSuccessful()

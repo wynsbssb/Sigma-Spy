@@ -63,6 +63,7 @@ local Scripts = {
 	Config = Files:GetModule("Sigma Spy/Config", "Config"),
 	ReturnSpoofs = Files:GetModule("Sigma Spy/Return spoofs", "Return Spoofs"),
 	Configuration = Configuration,
+	Files = Files,
 
 	--// Libraries
 	Process = Files:GetModule("lib/Process"),
@@ -87,7 +88,7 @@ local Communication = Modules.Communication
 --// Use custom font (optional)
 local FontContent = Files:GetAsset("ProggyClean.ttf", true)
 local FontJsonFile = Files:CreateFont("ProggyClean", FontContent)
-Ui:SetFont(FontJsonFile, FontContent)
+Ui:SetFontFile(FontJsonFile)
 
 --// Load modules
 Files:LoadModules(Modules, {

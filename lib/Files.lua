@@ -68,15 +68,16 @@ function Files:MakePath(Path: string)
 	return `{Folder}/{Path}`
 end
 
-function Files:LoadCustomasset(Path: string)
+function Files:LoadCustomasset(Path: string): string?
 	if not getcustomasset then return end
 
-	--// Check if the file has content
-	local Content = readfile(Path)
-	if Content == "" then return end
-
 	--// Load custom AssetId
-	return getcustomasset(Path)
+	local Success, AssetId = pcall(getcustomasset, Path)
+	
+	if not Success then return end
+	if not AssetId or AssetId == "" then return end
+
+	return AssetId
 end
 
 function Files:GetFile(Path: string, CustomAsset: boolean?): string?
