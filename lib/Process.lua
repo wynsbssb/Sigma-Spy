@@ -126,8 +126,8 @@ end
 function Process:CheckIsSupported(): boolean
     local CoreFunctions = {
         "hookmetamethod",
-        "getrawmetatable",
         "hookfunction",
+        "getrawmetatable",
         "setreadonly"
     }
 

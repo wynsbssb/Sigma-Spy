@@ -64,7 +64,8 @@ type Log = {
 	Selectable: table,
 	HeaderData: table,
 	ValueSwaps: table,
-	Timestamp: number
+	Timestamp: number,
+	IsExploit: boolean
 }
 
 --// Compatibility
@@ -138,8 +139,6 @@ end
 
 function Ui:LoadFont()
 	local FontFile = self.FontJsonFile
-
-	print("FontFile", FontFile, Files)
 
 	--// Get FontFace AssetId
 	local AssetId = Files:LoadCustomasset(FontFile)
@@ -314,7 +313,7 @@ function Ui:CreateElements(Parent, Options)
 		MaxColumns = 3
 	}):NextRow()
 
-	for Name, Data in next, Options do
+	for Name, Data in Options do
 		local Value = Data.Value
 		local Type = typeof(Value)
 
@@ -392,7 +391,6 @@ function Ui:CreateWindowContent(Window)
         Size = UDim2.new(1, -130, 0.4, 0),
     })
 
-	--// 
 	self.InfoSelector = InfoSelector
 	self.CanvasLayout = Layout
 
@@ -440,6 +438,12 @@ function Ui:MakeOptionsTab(InfoSelector)
 				Text = "Clear excludes",
 				Callback = function()
 					Process:UpdateAllRemoteData("Excluded", false)
+				end,
+			},
+			{
+				Text = "Copy Discord",
+				Callback = function()
+					self:SetClipboard("https://discord.gg/s9ngmUDWgb")
 				end,
 			}
 		}
@@ -512,7 +516,7 @@ function Ui:MakeEditorTab(InfoSelector)
 				Text = "Copy",
 				Callback = function()
 					local Script = CodeEditor:GetText()
-					Ui:SetClipboard(Script)
+					self:SetClipboard(Script)
 				end
 			},
 			{
@@ -584,7 +588,7 @@ function Ui:SetFocusedRemote(Data)
 	local Id = Data.Id
 
 	--// Flags
-	local NoCodeGeneration = Flags:GetFlagValue("NoCodeGeneration")
+	local TableArgs = Flags:GetFlagValue("TableArgs")
 
 	--// Unpack info
 	local RemoteData = Process:GetRemoteData(Id)
@@ -723,7 +727,7 @@ function Ui:SetFocusedRemote(Data)
 				Callback = function()
 					local Logs = HeaderData.Entries
 					local FilePath = Generation:DumpLogs(Logs)
-					Ui:ShowModal({"Saved dump to", FilePath})
+					self:ShowModal({"Saved dump to", FilePath})
 				end,
 			}
 		}
@@ -762,7 +766,7 @@ function Ui:SetFocusedRemote(Data)
 	
 	--// Generate script
 	local Parsed
-	if NoCodeGeneration then
+	if TableArgs then
 		Parsed = Generation:TableScript(Module, Args)
 	else
 		Parsed = Generation:RemoteScript(Module, Data)
@@ -873,7 +877,7 @@ end
 function Ui:BeginLogService()
 	coroutine.wrap(function()
 		while true do
-			Ui:ProcessLogQueue()
+			self:ProcessLogQueue()
 			task.wait()
 		end
 	end)()
@@ -893,6 +897,7 @@ function Ui:CreateLog(Data: Log)
     local IsReceive = Data.IsReceive
 	local Id = Data.Id
 	local Timestamp = Data.Timestamp
+	local IsExploit = Data.IsExploit
 	
 	local IsNilParent = Hook:Index(Remote, "Parent") == nil
 	local RemoteData = Process:GetRemoteData(Id)
@@ -902,8 +907,8 @@ function Ui:CreateLog(Data: Log)
 	if Paused then return end
 
 	--// Check caller (Ignore exploit calls)
-	local CheckCaller = Flags:GetFlagValue("CheckCaller")
-	if CheckCaller and not checkcaller() then return end
+	local LogExploit = Flags:GetFlagValue("LogExploit")
+	if not LogExploit and IsExploit then return end
 
 	--// IgnoreNil
 	local IgnoreNil = Flags:GetFlagValue("IgnoreNil")

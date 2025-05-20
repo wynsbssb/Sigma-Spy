@@ -97,7 +97,8 @@ local function ProcessRemote(OriginalFunc, MetaMethod: string, self, Method: str
 		Method = Method,
 		OriginalFunc = OriginalFunc,
 		MetaMethod = MetaMethod,
-		TransferType = "Send"
+		TransferType = "Send",
+		IsExploit = checkcaller()
 	}, ...)
 end
 
@@ -190,7 +191,8 @@ function Hook:ConnectClientRecive(Remote)
             Method = Method,
             OriginalFunc = PreviousFunction,
             IsReceive = true,
-            MetaMethod = "Connect"
+            MetaMethod = "Connect",
+			IsExploit = checkcaller()
         }, ...)
 	end
 
