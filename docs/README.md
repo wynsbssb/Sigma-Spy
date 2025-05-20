@@ -40,7 +40,7 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/depthso/Sigma-Spy/ref
 			<img src="/docs/images/Grouping.png">
       		Grouping enabled
 		</td>
-    	<td width="58%">
+		<td width="50%">
 			<img src="/docs/images/NoGrouping.png">
       		Grouping disabled
 		</td>
