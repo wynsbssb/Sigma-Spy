@@ -86,7 +86,11 @@ end
 
 function Hook:RunOnActors(Code: string, ChannelId: number)
 	if not getactors then return end
-	for _, Actor in getactors() do 
+	
+	local Actors = getactors()
+	if not Actors then return end
+	
+	for _, Actor in Actors do 
 		run_on_actor(Actor, Code, ChannelId)
 	end
 end
