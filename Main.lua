@@ -84,6 +84,7 @@ local Hook = Modules.Hook
 local Ui = Modules.Ui
 local Generation = Modules.Generation
 local Communication = Modules.Communication
+local Config = Modules.Config
 
 --// Use custom font (optional)
 local FontContent = Files:GetAsset("ProggyClean.ttf", true)
@@ -91,6 +92,7 @@ local FontJsonFile = Files:CreateFont("ProggyClean", FontContent)
 Ui:SetFontFile(FontJsonFile)
 
 --// Load modules
+Process:CheckConfig(Config)
 Files:LoadModules(Modules, {
 	Modules = Modules,
 	Services = Services
