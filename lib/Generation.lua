@@ -7,8 +7,9 @@ type RemoteData = {
 	IsReceive: boolean?,
 	Args: table,
 	Method: string,
-    	TransferType: string,
-	ValueReplacements: table
+    TransferType: string,
+	ValueReplacements: table,
+	NoVariables: boolean?
 }
 
 --// Module
@@ -21,6 +22,12 @@ local Config
 local Hook
 local ParserModule
 local ThisScript = script
+
+local function Merge(Base: table, New: table)
+	for Key, Value in next, New do
+		Base[Key] = Value
+	end
+end
 
 function Generation:Init(Data: table)
     local Modules = Data.Modules
@@ -74,9 +81,8 @@ function Generation:SetSwapsCallback(Callback: (Interface: table) -> ())
 end
 
 function Generation:GetBase(Module): (string, boolean)
-	local Version = ParserModule.Version
-	local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
-	Code ..= `-- Parser version {Version}\n\n`
+	--local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
+	local Code = "-- Generated with Sigma Spy Github: https://github.com/depthso/Sigma-Spy\n"
 
 	--// Generate variables code
 	local Variables = Module.Parser:MakeVariableCode({
@@ -110,20 +116,23 @@ function Generation:PickVariableName(): string
 	return Names[math.random(1, #Names)]
 end
 
-function Generation:NewParser()
+function Generation:NewParser(Extra: table)
 	local VariableName = self:PickVariableName()
 	local Swaps = self:GetSwaps()
 
-	--// Create new parser instance
-	local Module = ParserModule:New({
+	local Configuration = {
 		VariableBase = VariableName,
 		Swaps = Swaps,
 		IndexFunc = function(...)
 			return Hook:Index(...)
 		end,
-	})
+	}
 
-	return Module
+	--// Merge extra configuration
+	Merge(Configuration, Extra)
+
+	--// Create new parser instance
+	return ParserModule:New(Configuration)
 end
 
 type CallInfo = {
@@ -138,6 +147,12 @@ function Generation:CallRemote(Data, Info: CallInfo): string
 	local EmptyArgs = Info.EmptyArgs
 	local Arguments = Info.Arguments
 	local RemoteVariable = Info.RemoteVariable
+	local IsArray = Info.IsArray
+
+	--// Wrap in a unpack if the table is a dict
+	if not EmptyArgs and not IsArray then
+		Arguments = `unpack({Arguments}, 1, table.maxn({Arguments}))`
+	end
 
 	--// Firesignal script for client recieves
 	if IsReceive then
@@ -157,6 +172,7 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 	--// Unpack data
 	local Remote = Data.Remote
 	local Args = Data.Args
+	local NoVariables = Data.NoVariables
 
 	--// Remote info
 	local ClassName = Hook:Index(Remote, "ClassName")
@@ -170,15 +186,16 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 	Variables:PrerenderVariables(Args, {"Instance"})
 
 	--// Parse arguments
-	local ParsedArgs, ItemsCount = Parser:ParseTableIntoString({
+	local ParsedArgs, ItemsCount, IsArray = Parser:ParseTableIntoString({
 		NoBrackets = true,
+		NoVariables = NoVariables,
 		Table = Args
 	})
 
 	--// Create remote variable
 	local RemoteVariable = Variables:MakeVariable({
 		Value = Formatter:Format(Remote, {
-			NoVariableCreate = true
+			NoVariables = true
 		}),
 		Comment = `{ClassName} {IsNilParent and "| Remote parent is nil" or ""}`,
 		Name = Formatter:MakeName(Remote),
@@ -186,12 +203,23 @@ function Generation:RemoteScript(Module, Data: RemoteData): string
 		Class = "Remote"
 	})
 
+	--// Create table variable if not an array
+	if not IsArray or NoVariables then
+		ParsedArgs = Variables:MakeVariable({
+			Value = ("{%s}"):format(ParsedArgs),
+			Comment = not IsArray and "Arguments aren't ordered" or nil,
+			Name = "RemoteArgs",
+			Class = "Remote"
+		})
+	end
+
 	--// Make code
 	local Code = self:GetBase(Module)
 	local CallCode = self:CallRemote(Data, {
 		RemoteVariable = RemoteVariable,
 		EmptyArgs = ItemsCount == 0,
 		Arguments = ParsedArgs,
+		IsArray = IsArray
 	})
 	
 	return `{Code}\n{CallCode}`

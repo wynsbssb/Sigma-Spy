@@ -64,7 +64,12 @@ local Process = {
             -- }
         }
     },
-    RemoteOptions = {}
+    RemoteOptions = {},
+    ConfigOverwrites = {
+        [{"sirhurt", "potassium"}] = {
+            ForceUseCustomComm = true
+        }
+    }
 }
 
 --// Modules
@@ -99,6 +104,26 @@ function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
     ChannelWrapped = IsWrapped
 end
 
+function Process:GetConfigOverwrites(Name: string)
+    local ConfigOverwrites = self.ConfigOverwrites
+
+    for List, Overwrites in next, ConfigOverwrites do
+        if not table.find(List, Name) then continue end
+        return Overwrites
+    end
+    return
+end
+
+function Process:CheckConfig(Config: table)
+    local Name = identifyexecutor():lower()
+
+    --// Force configuration overwrites for specific executors
+    local Overwrites = self:GetConfigOverwrites(Name)
+    if not Overwrites then return end
+
+    Merge(Config, Overwrites)
+end
+
 function Process:DeepCloneTable(Table, Ignore: table?)
 	local New = {}
 	for Key, Value in next, Table do
@@ -123,7 +148,26 @@ function Process:FuncExists(Name: string)
 	return getfenv(1)[Name]
 end
 
-function Process:CheckIsSupported(): boolean
+function Process:CheckExecutor(): boolean
+    local Blacklisted = {
+        "wave",
+        "xeno",
+        "solara",
+    }
+
+    local Name = identifyexecutor():lower()
+    local IsBlacklisted = table.find(Blacklisted, Name)
+
+    --// Some executors have broken functionality
+    if IsBlacklisted then
+        Ui:ShowUnsupportedExecutor(Name)
+        return false
+    end
+
+    return true
+end
+
+function Process:CheckFunctions(): boolean
     local CoreFunctions = {
         "hookmetamethod",
         "hookfunction",
@@ -138,6 +182,22 @@ function Process:CheckIsSupported(): boolean
 
         --// Function missing!
         Ui:ShowUnsupported(Name)
+        return false
+    end
+
+    return true
+end
+
+function Process:CheckIsSupported(): boolean
+    --// Check if the executor is blacklisted
+    local ExecutorSupported = self:CheckExecutor()
+    if not ExecutorSupported then
+        return false
+    end
+
+    --// Check if the core functions exist
+    local FunctionsSupported = self:CheckFunctions()
+    if not FunctionsSupported then
         return false
     end
 

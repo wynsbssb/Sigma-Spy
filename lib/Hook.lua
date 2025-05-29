@@ -216,6 +216,8 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 	local Generation = Libraries.Generation
 	local Config = Libraries.Config
 
+	ProcessLib:CheckConfig(Config)
+
 	--// Init data
 	local InitData = {
 		Modules = {

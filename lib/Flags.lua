@@ -7,6 +7,9 @@ type Flag = {
 type Flags = {
     [string]: Flag
 }
+type table = {
+    [any]: any
+}
 
 local Module = {
     Flags = {
@@ -55,6 +58,10 @@ local Module = {
         TableArgs = {
             Value = false,
             Label = "Table args"
+        },
+        NoVariables = {
+            Value = false,
+            Label = "No compression"
         },
     }
 }

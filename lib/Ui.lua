@@ -250,10 +250,17 @@ function Ui:ShowModal(Lines: table)
 	})
 end
 
+function Ui:ShowUnsupportedExecutor(Name: string)
+	Ui:ShowModal({
+		"Unfortunately Sigma Spy is not supported on your executor",
+		`\nYour executor: {Name}`
+	})
+end
+
 function Ui:ShowUnsupported(FuncName: string)
 	Ui:ShowModal({
 		"Unfortunately Sigma Spy is not supported on your executor",
-		`\n\nMissing function: {FuncName}`
+		`\nMissing function: {FuncName}`
 	})
 end
 
@@ -589,6 +596,7 @@ function Ui:SetFocusedRemote(Data)
 
 	--// Flags
 	local TableArgs = Flags:GetFlagValue("TableArgs")
+	local NoVariables = Flags:GetFlagValue("NoVariables")
 
 	--// Unpack info
 	local RemoteData = Process:GetRemoteData(Id)
@@ -606,7 +614,9 @@ function Ui:SetFocusedRemote(Data)
 	})
 
 	--// Create new parser
-	local Module = Generation:NewParser()
+	local Module = Generation:NewParser({
+		NoVariables = NoVariables
+	})
 	local Parser = Module.Parser
 	local Formatter = Module.Formatter
 	Formatter:SetValueSwaps(ValueSwaps)
