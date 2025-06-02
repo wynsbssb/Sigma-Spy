@@ -66,7 +66,7 @@ local Process = {
     },
     RemoteOptions = {},
     ConfigOverwrites = {
-        [{"sirhurt", "potassium"}] = {
+        [{"sirhurt", "potassium", "wave"}] = {
             ForceUseCustomComm = true
         }
     }
@@ -150,9 +150,9 @@ end
 
 function Process:CheckExecutor(): boolean
     local Blacklisted = {
-        "wave",
         "xeno",
         "solara",
+        "jjsploit"
     }
 
     local Name = identifyexecutor():lower()
