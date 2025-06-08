@@ -1,7 +1,14 @@
 return {
+    --// Hooking
     ForceUseCustomComm = false,
     ReplaceMetaCallFunc = false,
     NoReceiveHooking = false,
+    NoFunctionPatching = false,
+    BlackListedServices = {
+        "RobloxReplicatedStorage"
+    },
+
+    --// Editor
     VariableNames = {"RIFT_IS_DETECTED%.d", "Skibidi%.d", "AURA%.d", "Sigma%.d", "Mango%.d", "Phonk%.d", "Argument%.d"},
     SyntaxColors = {
         Text = Color3.fromRGB(204, 204, 204),
@@ -24,6 +31,8 @@ return {
         FunctionName = Color3.fromRGB(253, 251, 172),
         Bracket = Color3.fromRGB(204, 204, 204)
     },
+
+    --// UI
     MethodColors = {
         ["fireserver"] = Color3.fromRGB(242, 255, 0),
         ["invokeserver"] = Color3.fromRGB(99, 86, 245),
@@ -33,9 +42,6 @@ return {
         ["invoke"] = Color3.fromRGB(245, 77, 77),
         ["oninvoke"] = Color3.fromRGB(245, 77, 209),
         ["fire"] = Color3.fromRGB(245, 141, 77),
-    },
-    BlackListedServices = {
-        "RobloxReplicatedStorage"
     },
     ThemeConfig = {
         BaseTheme = "ImGui",
