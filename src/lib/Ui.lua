@@ -72,8 +72,7 @@ type Log = {
 local SetClipboard = setclipboard or toclipboard or set_clipboard
 
 --// Libraries
-local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
-local IDEModule = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/lib/ide.lua'))()
+local ReGui = loadstring(game:HttpGet('http://127.0.0.1:3000/ReGui.lua'))()
 
 --// Services
 local InsertService: InsertService
@@ -508,17 +507,19 @@ function Ui:MakeEditorTab(InfoSelector)
 
 	local SyntaxColors = Config.SyntaxColors
 
+	--// Create tab
+	local EditorTab = InfoSelector:CreateTab({
+		Name = "Editor"
+	})
+
 	--// IDE
-	local CodeEditor = IDEModule.CodeFrame.new({
+	local CodeEditor = EditorTab:CodeEditor({
+		Fill = true,
 		Editable = true,
 		FontSize = 13,
 		Colors = SyntaxColors,
-		FontFace = TextFont
-	})
-	CodeEditor:SetText(Default)
-	
-	local EditorTab = InfoSelector:CreateTab({
-		Name = "Editor"
+		FontFace = TextFont,
+		Text = Default
 	})
 
 	--// Configure IDE frame
@@ -725,7 +726,7 @@ function Ui:SetFocusedRemote(Data)
 	end
 	function Data:MakeScript(ScriptType: string)
 		local Script = Generation:RemoteScript(Module, self, ScriptType)
-		SetIDEText(Script, `Editing: {Remote}`)
+		SetIDEText(Script, `Editing: {Remote}.lua`)
 	end
 	function Data:RepeatCall()
 		local Signal = Hook:Index(Remote, Method)
