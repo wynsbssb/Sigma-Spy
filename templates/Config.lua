@@ -8,6 +8,9 @@ return {
         "RobloxReplicatedStorage"
     },
 
+    --// Processing
+    ForceKonstantDecompiler = false,
+
     --// Editor
     VariableNames = {
         "RIFT_IS_DETECTED%.d", 

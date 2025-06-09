@@ -78,6 +78,7 @@ local Hook
 local Communication
 local ReturnSpoofs
 local Ui
+local Config
 
 --// Communication channel
 local Channel
@@ -93,6 +94,7 @@ function Process:Init(Data)
     local Modules = Data.Modules
 
     --// Modules
+    Config = Modules.Config
     Ui = Modules.Ui
     Hook = Modules.Hook
     Communication = Modules.Communication
@@ -315,18 +317,19 @@ end
 
 function Process:Decompile(Script: Script): string
     local KonstantAPI = "http://api.plusgiant5.com/konstant/decompile"
+    local ForceKonstant = Config.ForceKonstantDecompiler
 
     --// Use built-in decompiler if the executor supports it
-    if decompile then 
+    if decompile and not ForceKonstant then 
         return decompile(Script)
     end
 
     --// getscriptbytecode
     local Success, Bytecode = pcall(getscriptbytecode, Script)
-    if Success then
-        local Error = `-- Failed to get script bytecode, error:\n`
+    if not Success then
+        local Error = `--Failed to get script bytecode, error:\n`
         Error ..= `\n--[[\n{Bytecode}\n]]`
-        return Error
+        return Error, true
     end
     
     --// Send POST request to the API
@@ -341,12 +344,12 @@ function Process:Decompile(Script: Script): string
 
     --// Error check
     if Responce.StatusCode ~= 200 then
-        local Error = `-- [KONSTANT] Error occured while requesting the API, error:\n`
-        Error ..= `\n--[[\n{httpResult.Body}\n]]`
-        return Error
+        local Error = `--[KONSTANT] Error occured while requesting the API, error:\n`
+        Error ..= `\n--[[\n{Responce.Body}\n]]`
+        return Error, true
     end
 
-    return httpResult.Body
+    return Responce.Body
 end
 
 function Process:ProcessRemote(Data: RemoteData, ...): table?

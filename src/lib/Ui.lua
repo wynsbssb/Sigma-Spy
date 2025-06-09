@@ -770,6 +770,12 @@ function Ui:SetFocusedRemote(Data)
 	function Data:Decompile(WhichScript: string)
 		local ToDecompile = Data[WhichScript]
 
+		--// Reject client events
+		if IsReceive then 
+			SetIDEText("-- Boiiiii what did you say about IsReceive (-9999999 AURA)")
+			return 
+		end
+
 		--// Check if script exists
 		if not Script then 
 			SetIDEText("--Script is missing (-9999999 AURA)")
@@ -779,11 +785,15 @@ function Ui:SetFocusedRemote(Data)
 		SetIDEText("--Decompiling... +9999999 AURA (mango phonk)")
 
 		--// Decompile script
-		local Decompiled = Process:Decompile(ToDecompile)
-		local Source = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)\n"
-		Source ..=  Decompiled
+		local Decompiled, IsError = Process:Decompile(ToDecompile)
+		local Header = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)"
 
-		SetIDEText(Source, `Viewing: {ToDecompile}.lua`)
+		--// Add header for successful decompilations
+		if not IsError then
+			Decompiled = `{Header}\n{Decompiled}`
+		end
+
+		SetIDEText(Decompiled, `Viewing: {ToDecompile}.lua`)
 	end
 	
 	--// RemoteOptions

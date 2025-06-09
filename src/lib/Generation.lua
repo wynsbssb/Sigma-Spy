@@ -130,7 +130,7 @@ function Generation:GetBase(Module): (string, boolean)
 
 	--// Generate variables code
 	local Variables = Module.Parser:MakeVariableCode({
-		"Services", "Variables", "Remote"
+		"Services", "Remote", "Variables"
 	})
 
 	local NoVariables = Variables == ""
