@@ -81,6 +81,11 @@ function Generation:Init(Data: table)
 	self:LoadParser(ParserUrl)
 end
 
+function Generation:MakePrintable(String: string): string
+	local Formatter = ParserModule.Modules.Formatter
+	return Formatter:MakePrintable(String)
+end
+
 function Generation:WriteDump(Content: string): string
 	local DumpBaseName = self.DumpBaseName
 

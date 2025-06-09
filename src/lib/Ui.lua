@@ -679,7 +679,7 @@ function Ui:SetFocusedRemote(Data)
 
 	local TabFocused = self:RemovePreviousTab()
 	local Tab = InfoSelector:CreateTab({
-		Name = `Remote: {Remote}`,
+		Name = self:FilterName(`Remote: {Remote}`, 50),
 		Focused = TabFocused
 	})
 
@@ -697,7 +697,7 @@ function Ui:SetFocusedRemote(Data)
 	Data.Selectable:SetSelected(true)
 
 	local function SetIDEText(Content: string, Task: string)
-		Data.Task = Task
+		Data.Task = Task or "Sigma Spy"
 		CodeEditor:SetText(Content)
 	end
 	local function DataConnection(Name, ...)
@@ -711,7 +711,8 @@ function Ui:SetFocusedRemote(Data)
 	function Data:ScriptOptions(Button: GuiButton)
 		Ui:MakeButtonMenu(Button, {self}, {
 			["Caller Info"] = DataConnection("GenerateInfo"),
-			["Decompile"] = DataConnection("Decompile")
+			["Decompile"] = DataConnection("Decompile", "SourceScript"),
+			["Decompile Calling"] = DataConnection("Decompile", "CallingScript")
 		})
 	end
 	function Data:BuildScript(Button: GuiButton)
@@ -765,14 +766,8 @@ function Ui:SetFocusedRemote(Data)
 		local Script = Generation:AdvancedInfo(Module, self)
 		SetIDEText(Script, `Advanced Info for: {Remote}`)
 	end
-	function Data:Decompile()
-		local ToDecompile = SourceScript or Script
-
-		--// Check if decompile function exists
-		if not decompile then 
-			SetIDEText("--Exploit is missing 'decompile' function (-9999999 AURA)")
-			return 
-		end
+	function Data:Decompile(WhichScript: string)
+		local ToDecompile = Data[WhichScript]
 
 		--// Check if script exists
 		if not Script then 
@@ -783,7 +778,7 @@ function Ui:SetFocusedRemote(Data)
 		SetIDEText("--Decompiling... +9999999 AURA (mango phonk)")
 
 		--// Decompile script
-		local Decompiled = decompile(ToDecompile)
+		local Decompiled = Process:Decompile(ToDecompile)
 		local Source = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)\n"
 		Source ..=  Decompiled
 
@@ -990,9 +985,11 @@ function Ui:BeginLogService()
 	end)()
 end
 
-function Ui:FilterName(Name: string): string
-	local Trimmed = Name:sub(1, 15)
+function Ui:FilterName(Name: string, CharacterLimit: number?): string
+	local Trimmed = Name:sub(1, CharacterLimit or 20)
 	local Filtred = Trimmed:gsub("[\n\r]", "")
+	Filtred = Generation:MakePrintable(Filtred)
+
 	return Filtred
 end
 

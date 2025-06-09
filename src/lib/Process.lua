@@ -280,7 +280,7 @@ function Process:FindCallingLClosure(Offset: number)
         local IsValid = debug.info(Offset, "l") ~= -1
         if not IsValid then continue end
 
-        --// Check if the function is valud
+        --// Check if the function is valid
         local Function = debug.info(Offset, "f")
         if not Function then return end
 
@@ -311,6 +311,42 @@ function Process:Callback(Data: RemoteData, ...): table?
     return {
         OriginalFunc(Remote, ...)
     }
+end
+
+function Process:Decompile(Script: Script): string
+    local KonstantAPI = "http://api.plusgiant5.com/konstant/decompile"
+
+    --// Use built-in decompiler if the executor supports it
+    if decompile then 
+        return decompile(Script)
+    end
+
+    --// getscriptbytecode
+    local Success, Bytecode = pcall(getscriptbytecode, Script)
+    if Success then
+        local Error = `-- Failed to get script bytecode, error:\n`
+        Error ..= `\n--[[\n{Bytecode}\n]]`
+        return Error
+    end
+    
+    --// Send POST request to the API
+    local Responce = request({
+        Url = KonstantAPI,
+        Body = Bytecode,
+        Method = "POST",
+        Headers = {
+            ["Content-Type"] = "text/plain"
+        },
+    })
+
+    --// Error check
+    if Responce.StatusCode ~= 200 then
+        local Error = `-- [KONSTANT] Error occured while requesting the API, error:\n`
+        Error ..= `\n--[[\n{httpResult.Body}\n]]`
+        return Error
+    end
+
+    return httpResult.Body
 end
 
 function Process:ProcessRemote(Data: RemoteData, ...): table?
