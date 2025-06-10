@@ -72,11 +72,15 @@ end
 function Files:LoadCustomasset(Path: string): string?
 	if not getcustomasset then return end
 
+	--// Check content
+	local Content = readfile(Path)
+	if #Content <= 0 then return end
+
 	--// Load custom AssetId
 	local Success, AssetId = pcall(getcustomasset, Path)
 	
 	if not Success then return end
-	if not AssetId or AssetId == "" then return end
+	if not AssetId or #AssetId <= 0 then return end
 
 	return AssetId
 end

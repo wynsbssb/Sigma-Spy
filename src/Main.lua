@@ -2,6 +2,7 @@
 local Configuration = {
 	UseWorkspace = false, 
 	NoActors = false,
+	FolderName = "Sigma Spy",
 	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main",
 	ParserUrl = "https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main"
 }
@@ -23,19 +24,20 @@ local Services = setmetatable({}, {
 	end,
 })
 
+--// Files module
 local Files = (function()
 	--INSERT: @lib/Files.lua
 end)()
-
 Files:PushConfig(Configuration)
 Files:Init({
 	Services = Services
 })
 
+local Folder = Files.FolderName
 local Scripts = {
 	--// User configurations
-	Config = Files:GetModule("Sigma Spy/Config", "Config"),
-	ReturnSpoofs = Files:GetModule("Sigma Spy/Return spoofs", "Return Spoofs"),
+	Config = Files:GetModule(`{Folder}/Config`, "Config"),
+	ReturnSpoofs = Files:GetModule(`{Folder}/Return spoofs`, "Return Spoofs"),
 	Configuration = Configuration,
 	Files = Files,
 
@@ -83,7 +85,7 @@ if not Supported then
 end
 
 --// Create communication channel
-local ChannelId = Communication:CreateChannel()
+local ChannelId, Event = Communication:CreateChannel()
 Communication:AddCommCallback("QueueLog", function(...)
 	Ui:QueueLog(...)
 end)
@@ -103,7 +105,8 @@ end)
 --// Create window content
 Ui:CreateWindowContent(Window)
 
---// Begin the Log queue service
+--// Begin the Log queue 
+Ui:SetCommChannel(Event)
 Ui:BeginLogService()
 
 --// Load hooks

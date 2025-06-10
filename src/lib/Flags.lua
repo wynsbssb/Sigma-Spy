@@ -25,6 +25,10 @@ local Module = {
             Value = false,
             Label = "Auto select newest",
         },
+        DecompilePopout = { -- Lovre SHUSH
+            Value = false,
+            Label = "Pop-out decompiles",
+        },
         IgnoreNil = {
             Value = true,
             Label = "Ignore nil parents",
@@ -66,7 +70,7 @@ local Module = {
         NoVariables = {
             Value = false,
             Label = "No compression"
-        },
+        }
     }
 }
 

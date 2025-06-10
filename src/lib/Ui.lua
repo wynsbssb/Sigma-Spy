@@ -91,6 +91,7 @@ local RemotesCount = 0
 
 local TextFont = Font.fromEnum(Enum.Font.Code)
 local FontSuccess = false
+local CommChannel
 
 function Ui:Init(Data)
     local Modules = Data.Modules
@@ -112,6 +113,10 @@ function Ui:Init(Data)
 	self:CheckScale()
 	self:LoadFont()
 	self:LoadReGui()
+end
+
+function Ui:SetCommChannel(NewCommChannel: BindableEvent)
+	CommChannel = NewCommChannel
 end
 
 function Ui:CheckScale()
@@ -177,12 +182,12 @@ function Ui:LoadReGui()
 end
 
 type CreateButtons = {
-	Base: table,
+	Base: table?,
 	Buttons: table,
 	NoTable: boolean?
 }
 function Ui:CreateButtons(Parent, Data: CreateButtons)
-	local Base = Data.Base
+	local Base = Data.Base or {}
 	local Buttons = Data.Buttons
 	local NoTable = Data.NoTable
 
@@ -313,6 +318,7 @@ function Ui:CheckKeybindLayout(Container, KeyCode: Enum.KeyCode, Callback)
 		Label = "",
 		Value = KeyCode,
 		LayoutOrder = 2,
+		IgnoreGameProcessed = false,
 		Callback = function()
 			--// Check if keybinds are enabled
 			local Enabled = Flags:GetFlagValue("KeybindsEnabled")
@@ -472,6 +478,15 @@ function Ui:MakeOptionsTab(InfoSelector)
 				Callback = function()
 					self:SetClipboard("https://github.com/depthso/Sigma-Spy")
 				end,
+			},
+			{
+				Text = "Edit Spoofs",
+				Callback = function()
+					self:EditFile("Return spoofs.lua", true, function(Window, Content: string)
+						Window:Close()
+						CommChannel:Fire("UpdateSpoofs", Content)
+					end)
+				end,
 			}
 		}
 	})
@@ -538,7 +553,6 @@ function Ui:MakeEditorTab(InfoSelector)
 	--// Buttons
 	local ButtonsRow = EditorTab:Row()
 	self:CreateButtons(ButtonsRow, {
-		Base = {},
 		NoTable = true,
 		Buttons = {
 			{
@@ -552,7 +566,15 @@ function Ui:MakeEditorTab(InfoSelector)
 				Text = "Run",
 				Callback = function()
 					local Script = CodeEditor:GetText()
-					loadstring(Script, "SigmaSpy-USERSCRIPT")()
+					local Func, Error = loadstring(Script, "SigmaSpy-USERSCRIPT")
+
+					--// Syntax check
+					if not Func then
+						self:ShowModal({"Running script!\n", Error})
+						return
+					end
+
+					Func()
 				end
 			},
 			{
@@ -597,16 +619,79 @@ end
 
 function Ui:MakeEditorPopoutWindow(Content: string, WindowConfig: table)
 	local Window = self:CreateWindow(WindowConfig)
+	local Buttons = WindowConfig.Buttons or {}
+
 	local CodeEditor = Window:CodeEditor({
 		Text = Content,
 		Editable = true,
+		Fill = true,
 		FontSize = 13,
 		Colors = SyntaxColors,
 		FontFace = TextFont
 	})
 
+	--// Default buttons
+	table.insert(Buttons, {
+		Text = "Copy",
+		Callback = function()
+			local Script = CodeEditor:GetText()
+			self:SetClipboard(Script)
+		end
+	})
+
+	--// Buttons
+	local ButtonsRow = Window:Row()
+	self:CreateButtons(ButtonsRow, {
+		NoTable = true,
+		Buttons = Buttons
+	})
+
 	Window:Center()
 	return CodeEditor
+end
+
+function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, string) -> nil)?)
+	local Folder = Files.FolderName
+
+	--// Relative to Sigma Spy folder
+	if InFolder then
+		FilePath = `{Folder}/{FilePath}`
+	end
+
+	--// Get file content
+	local Content = readfile(FilePath)
+	Content = Content:gsub("\r\n", "\n")
+
+	local CodeEditor
+	local Buttons = {
+		{
+			Text = "Save",
+			Callback = function()
+				local Script = CodeEditor:GetText()
+				local Success, Error = loadstring(Script)
+
+				--// Syntax check
+				if not Success then
+					self:ShowModal({"Error saving file!\n", Error})
+					return
+				end
+				
+				--// Save contents
+				writefile(FilePath, Script)
+
+				--// Invoke on save function
+				if OnSaveFunc then
+					OnSaveFunc(Window, Script)
+				end
+			end
+		}
+	}
+
+	--// Create Editor Window
+	CodeEditor = self:MakeEditorPopoutWindow(Content, {
+		Title = `Editing: {FilePath}`,
+		Buttons = Buttons
+	})
 end
 
 type MenuOptions = {
@@ -652,6 +737,69 @@ function Ui:RemovePreviousTab(Title: string): boolean
 	return TabFocused
 end
 
+function Ui:MakeTableHeaders(Table, Rows: table)
+	local HeaderRow = Table:HeaderRow()
+	for _, Catagory in Rows do
+		local Column = HeaderRow:NextColumn()
+		Column:Label({Text=Catagory})
+	end
+end
+
+function Ui:Decompile(Editor: table, Script: script)
+	local Header = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)"
+	Editor:SetText("--Decompiling... +9999999 AURA (mango phonk)")
+
+	--// Decompile script
+	local Decompiled, IsError = Process:Decompile(Script)
+
+	--// Add header for successful decompilations
+	if not IsError then
+		Decompiled = `{Header}\n{Decompiled}`
+	end
+
+	Editor:SetText(Decompiled)
+end
+
+type DisplayTableConfig = {
+	Rows: table,
+	Flags: table?,
+	ToDisplay: table,
+	Table: table
+}
+function Ui:DisplayTable(Parent, Config: DisplayTableConfig): table
+	--// Configuration
+	local Rows = Config.Rows
+	local Flags = Config.Flags
+	local DataTable = Config.Table
+	local ToDisplay = Config.ToDisplay
+
+	Flags.MaxColumns = #Rows
+
+	--// Create table
+	local Table = Parent:Table(Flags)
+
+	--// Table headers
+	self:MakeTableHeaders(Table, Rows)
+
+	--// Table layout
+	for RowIndex, Name in ToDisplay do
+		local Row = Table:Row()
+		
+		--// Create Columns
+		for Count, Catagory in Rows do
+			local Column = Row:NextColumn()
+			
+			--// Value text
+			local Value = Catagory == "Name" and Name or DataTable[Name]
+			if not Value then continue end
+
+			Column:Label({Text=`{Value}`})
+		end
+	end
+
+	return Table
+end
+
 function Ui:SetFocusedRemote(Data)
 	--// Unpack remote data
 	local Remote = Data.Remote
@@ -672,6 +820,7 @@ function Ui:SetFocusedRemote(Data)
 	--// Unpack info
 	local RemoteData = Process:GetRemoteData(Id)
 	local IsRemoteFunction = ClassData.IsRemoteFunction
+	local RemoteName = self:FilterName(`{Remote}`, 50)
 
 	--// UI data
 	local CodeEditor = self.CodeEditor
@@ -680,7 +829,7 @@ function Ui:SetFocusedRemote(Data)
 
 	local TabFocused = self:RemovePreviousTab()
 	local Tab = InfoSelector:CreateTab({
-		Name = self:FilterName(`Remote: {Remote}`, 50),
+		Name = self:FilterName(`Remote: {RemoteName}`, 50),
 		Focused = TabFocused
 	})
 
@@ -707,13 +856,32 @@ function Ui:SetFocusedRemote(Data)
 			return Data[Name](Data, Process:Unpack(Args))
 		end
 	end
+	local function ScriptCheck(Script, NoMissingCheck: boolean): boolean
+		--// Reject client events
+		if IsReceive then 
+			Ui:ShowModal({
+				"Recieves do not have a script because it's a Connection"
+			})
+			return 
+		end
+
+		--// Check if script exists
+		if not Script and not NoMissingCheck then 
+			Ui:ShowModal({"The Script has been destroyed by the game (-9999999 AURA)"})
+			return
+		end
+
+		return true
+	end
 
 	--// Functions
 	function Data:ScriptOptions(Button: GuiButton)
 		Ui:MakeButtonMenu(Button, {self}, {
 			["Caller Info"] = DataConnection("GenerateInfo"),
 			["Decompile"] = DataConnection("Decompile", "SourceScript"),
-			["Decompile Calling"] = DataConnection("Decompile", "CallingScript")
+			["Decompile Calling"] = DataConnection("Decompile", "CallingScript"),
+			["Repeat Call"] = DataConnection("RepeatCall"),
+			["Save Bytecode"] = DataConnection("SaveBytecode"),
 		})
 	end
 	function Data:BuildScript(Button: GuiButton)
@@ -724,9 +892,27 @@ function Ui:SetFocusedRemote(Data)
 			["Spam Remote"] = DataConnection("MakeScript", "Spam")
 		})
 	end
+	function Data:SaveBytecode()
+		--// Problem check
+		if not ScriptCheck(Script, true) then return end
+
+		--// getscriptbytecode
+    	local Success, Bytecode = pcall(getscriptbytecode, Script)
+		if not Success then
+			Ui:ShowModal({"Failed to get Scripte bytecode (-9999999 AURA)"})
+			return
+		end
+
+		--// Save file
+		local PathBase = `{Script} %s.txt`
+		local FilePath = Generation:TimeStampFile(PathBase)
+		writefile(FilePath, Bytecode)
+
+		Ui:ShowModal({"Saved bytecode to", FilePath})
+	end
 	function Data:MakeScript(ScriptType: string)
 		local Script = Generation:RemoteScript(Module, self, ScriptType)
-		SetIDEText(Script, `Editing: {Remote}.lua`)
+		SetIDEText(Script, `Editing: {RemoteName}.lua`)
 	end
 	function Data:RepeatCall()
 		local Signal = Hook:Index(Remote, Method)
@@ -740,60 +926,46 @@ function Ui:SetFocusedRemote(Data)
 	function Data:GetReturn()
 		local ReturnValues = self.ReturnValues
 
+		--// Error messages
 		if not IsRemoteFunction then
-			SetIDEText("-- Remote is not a function bozo (-9999999 AURA)")
+			Ui:ShowModal({"The Remote is not a Remote Function (-9999999 AURA)"})
 			return
 		end
 		if not ReturnValues then
-			SetIDEText("-- No return values (-9999999 AURA)")
+			Ui:ShowModal({"No return values (-9999999 AURA)"})
 			return
 		end
 
 		--// Generate script
 		local Script = Generation:TableScript(Module, ReturnValues)
-		SetIDEText(Script, `Return Values for: {Remote}`)
+		SetIDEText(Script, `Return Values for: {RemoteName}`)
 	end
 	function Data:GenerateInfo()
-		--// Reject client events
-		if IsReceive then 
-			local Script = "-- Boiiiii what did you say about IsReceive (-9999999 AURA)\n"
-			Script ..= "\n-- Voice message: ▶ .ılıılıılıılıılıılı. 0:69\n"
-
-			SetIDEText(Script)
-			return 
-		end
+		--// Problem check
+		if not ScriptCheck(nil, true) then return end
 
 		--// Generate script
 		local Script = Generation:AdvancedInfo(Module, self)
-		SetIDEText(Script, `Advanced Info for: {Remote}`)
+		SetIDEText(Script, `Advanced Info for: {RemoteName}`)
 	end
 	function Data:Decompile(WhichScript: string)
+		local DecompilePopout = Flags:GetFlagValue("DecompilePopout")
 		local ToDecompile = Data[WhichScript]
+		local Editor = CodeEditor
 
-		--// Reject client events
-		if IsReceive then 
-			SetIDEText("-- Boiiiii what did you say about IsReceive (-9999999 AURA)")
-			return 
+		--// Problem check
+		if not ScriptCheck(ToDecompile, true) then return end
+
+		local Task = Ui:FilterName(`Viewing: {ToDecompile}.lua`, 200)
+		
+		--// Automatically Pop-out the editor for decompiling if enabled
+		if DecompilePopout then
+			Editor = Ui:MakeEditorPopoutWindow(Decompiled, {
+				Title = Task
+			})
 		end
 
-		--// Check if script exists
-		if not Script then 
-			SetIDEText("--Script is missing (-9999999 AURA)")
-			return
-		end
-
-		SetIDEText("--Decompiling... +9999999 AURA (mango phonk)")
-
-		--// Decompile script
-		local Decompiled, IsError = Process:Decompile(ToDecompile)
-		local Header = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)"
-
-		--// Add header for successful decompilations
-		if not IsError then
-			Decompiled = `{Header}\n{Decompiled}`
-		end
-
-		SetIDEText(Decompiled, `Viewing: {ToDecompile}.lua`)
+		Ui:Decompile(Editor, ToDecompile)
 	end
 	
 	--// RemoteOptions
@@ -842,40 +1014,29 @@ function Ui:SetFocusedRemote(Data)
 					local FilePath = Generation:DumpLogs(Logs)
 					self:ShowModal({"Saved dump to", FilePath})
 				end,
+			},
+			{
+				Text = "View Connections",
+				Callback = function()
+					local Method = ClassData.Receive[1]
+					local Signal = Remote[Method]
+					self:ViewConnections(RemoteName, Signal)
+				end,
 			}
 		}
 	})
 
-	--// Remote information
-	local Rows = {"Name", "Value"}
-	local DataTable = Tab:Table({
-		Border = true,
-		RowBackground = true,
-		MaxColumns = 2
+	--// Remote information table
+	self:DisplayTable(Tab, {
+		Rows = {"Name", "Value"},
+		Table = Data,
+		ToDisplay = ToDisplay,
+		Flags = {
+			Border = true,
+			RowBackground = true,
+			MaxColumns = 2
+		}
 	})
-
-	--// Table headers
-	local HeaderRow = DataTable:HeaderRow()
-	for _, Catagory in Rows do
-		local Column = HeaderRow:NextColumn()
-		Column:Label({Text=Catagory})
-	end
-
-	--// Table layout
-	for RowIndex, Name in ToDisplay do
-		local Row = DataTable:Row()
-		
-		--// Create Columns
-		for Count, Catagory in Rows do
-			local Column = Row:NextColumn()
-			
-			--// Value text
-			local Value = Catagory == "Name" and Name or Data[Name]
-			if not Value then continue end
-
-			Column:Label({Text=`{Value}`})
-		end
-	end
 	
 	--// Arguments table script
 	if TableArgs then
@@ -888,6 +1049,87 @@ function Ui:SetFocusedRemote(Data)
 	Data:MakeScript("Remote")
 end
 
+function Ui:ViewConnections(RemoteName: string, Signal: RBXScriptConnection)
+	local Window = self:CreateWindow({
+		Title = `Connections for: {RemoteName}`,
+		Size = UDim2.fromOffset(450, 250)
+	})
+
+	local ToDisplay = {
+		"Enabled",
+		"LuaConnection",
+		"Script"
+	}
+
+	--// Get Filtered connections
+	local Connections = Process:FilterConnections(Signal, ToDisplay)
+
+	--// Table
+	local Table = Window:Table({
+		Border = true,
+		RowBackground = true,
+		MaxColumns = 3
+	})
+
+	local ButtonsForValues = {
+		["Script"] = function(Row, Value)
+			Row:Button({
+				Text = "Decompile",
+				Callback = function()
+					local Task = self:FilterName(`Viewing: {Value}.lua`, 200)
+					local Editor = self:MakeEditorPopoutWindow(nil, {
+						Title = Task
+					})
+					self:Decompile(Editor, Value)
+				end
+			})
+		end,
+		["Enabled"] = function(Row, Enabled, Connection)
+			local Base = "Set %s"
+			Row:Button({
+				Text = Base:format(Enabled and "Disabled" or "Enabled"),
+				Callback = function(self)
+					Enabled = not Enabled
+					self.Text = Base:format(Enabled and "Disabled" or "Enabled")
+
+					--// Enable or disable the connection
+					if Enabled then
+						Connection:Enable()
+					else
+						Connection:Disable()
+					end
+				end
+			})
+		end
+	}
+
+	--// Make headers on the table
+	self:MakeTableHeaders(Table, ToDisplay)
+
+	for _, Connection in Connections do
+		local Row = Table:Row()
+
+		for _, Property in ToDisplay do
+			local Column = Row:NextColumn()
+			local ColumnRow = Column:Row()
+
+			local Value = Connection[Property]
+			local Callback = ButtonsForValues[Property]
+
+			--// Value label
+			ColumnRow:Label({Text=`{Value}`})
+
+			--// Add buttons
+			if Callback then
+				Callback(ColumnRow, Value, Connection)
+			end
+		end
+	end
+
+	--// Center Window
+	Window:Center()
+end
+
 function Ui:GetRemoteHeader(Data: Log)
 	local LogLimit = self.LogLimit
 	local Logs = self.Logs
@@ -896,6 +1138,7 @@ function Ui:GetRemoteHeader(Data: Log)
 	--// Remote info
 	local Id = Data.Id
 	local Remote = Data.Remote
+	local RemoteName = self:FilterName(`{Remote}`, 30)
 
 	--// NoTreeNodes
 	local NoTreeNodes = Flags:GetFlagValue("NoTreeNodes")
@@ -918,7 +1161,7 @@ function Ui:GetRemoteHeader(Data: Log)
 	if not NoTreeNodes then
 		HeaderData.TreeNode = RemotesList:TreeNode({
 			LayoutOrder = -1 * RemotesCount,
-			Title = `{Remote}`
+			Title = RemoteName
 		})
 	end
 

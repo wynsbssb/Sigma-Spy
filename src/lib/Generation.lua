@@ -86,11 +86,15 @@ function Generation:MakePrintable(String: string): string
 	return Formatter:MakePrintable(String)
 end
 
+function Generation:TimeStampFile(FilePath: string): string
+	local TimeStamp = os.date("%Y-%m-%d_%H-%M-%S")
+	local Formatted = FilePath:format(TimeStamp)
+	return Formatted
+end
+
 function Generation:WriteDump(Content: string): string
 	local DumpBaseName = self.DumpBaseName
-
-	local TimeStamp = os.date("%Y-%m-%d_%H-%M-%S")
-	local FilePath = DumpBaseName:format(TimeStamp)
+	local FilePath = self:TimeStampFile(DumpBaseName)
 
 	--// Write to file
 	writefile(FilePath, Content)

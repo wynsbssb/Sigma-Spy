@@ -47,21 +47,23 @@ local Process = {
             }
         },
         ["BindableEvent"] = {
+            NoReciveHook = true,
             Send = {
                 "Fire",
             },
-            -- Receive = {
-            --     "Event",
-            -- }
+            Receive = {
+                "Event",
+            }
         },
         ["BindableFunction"] = {
             IsRemoteFunction = true,
+            NoReciveHook = true,
             Send = {
                 "Invoke",
             },
-            -- Receive = {
-            --     "OnInvoke",
-            -- }
+            Receive = {
+                "OnInvoke",
+            }
         }
     },
     RemoteOptions = {},
@@ -83,6 +85,8 @@ local Config
 --// Communication channel
 local Channel
 local ChannelWrapped = false
+
+local SigmaENV = getfenv(1)
 
 local function Merge(Base: table, New: table)
 	for Key, Value in next, New do
@@ -255,7 +259,7 @@ function Process:SetExtraData(Data: table)
     self.ExtraData = Data
 end
 
-function Process:GetRemoteSpoof(Remote: Instance, Method: string, ...)
+function Process:GetRemoteSpoof(Remote: Instance, Method: string, ...): table?
     local Spoof = ReturnSpoofs[Remote]
 
     if not Spoof then return end
@@ -268,8 +272,12 @@ function Process:GetRemoteSpoof(Remote: Instance, Method: string, ...)
         ReturnValues = ReturnValues(...)
     end
 
-	Communication:Warn("Spoofed", Method)
+	--Communication:Warn("Spoofed", Method)
 	return ReturnValues
+end
+
+function Process:SetNewReturnSpoofs(NewReturnSpoofs: table)
+    ReturnSpoofs = NewReturnSpoofs
 end
 
 function Process:FindCallingLClosure(Offset: number)
@@ -352,6 +360,63 @@ function Process:Decompile(Script: Script): string
     return Responce.Body
 end
 
+function Process:GetScriptFromFunc(Func: (...any) -> ...any)
+    local ENV = getfenv(Func)
+    if self:IsSigmaSpyENV(ENV) then 
+        return 
+    end
+
+    return rawget(ENV, "script")
+end
+
+function Process:ConnectionIsValid(Connection: table): boolean
+    local ValueReplacements = {
+		["Script"] = function(Connection: table): script?
+			local Function = Connection.Function
+			if not Function then return end
+
+			return self:GetScriptFromFunc(Function)
+		end
+	}
+
+    --// Check if these properties are valid
+    local ToCheck = {
+        "Script"
+    }
+
+    for _, Property in ToCheck do
+        local Replacement = ValueReplacements[Property]
+
+        --// Check if there's a function for a property
+        if Replacement then
+            Value = Replacement(Connection)
+        end
+
+        --// Check if the property has a value
+        if Value == nil then 
+            return false 
+        end
+    end
+
+    return true
+end
+
+function Process:FilterConnections(Signal: RBXScriptConnection): table
+    local Processed = {}
+
+    --// Filter each connection
+    for _, Connection in getconnections(Signal) do
+        if not self:ConnectionIsValid(Connection) then continue end
+        table.insert(Processed, Connection)
+    end
+
+    return Processed
+end
+
+function Process:IsSigmaSpyENV(Env: table): boolean
+    return ENV == SigmaENV
+end
+
 function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Unpack Data
     local Remote = Data.Remote
@@ -376,7 +441,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     local CallingFunction = self:FindCallingLClosure(6)
     local SourceScript
     if CallingFunction then
-        SourceScript = rawget(getfenv(CallingFunction), "script")
+        SourceScript = self:GetScriptFromFunc(CallingFunction)
     end
 
     --// Add to queue

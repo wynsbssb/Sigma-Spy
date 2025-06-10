@@ -15,14 +15,20 @@ local Process
 local Configuration
 local Config
 
+--// Services
+local ContentProvider
+
 local ExeENV = getfenv(1)
 
 function Hook:Init(Data)
     Modules = Data.Modules
+	Services = Data.Services
 
 	Process = Modules.Process
 	Config = Modules.Config or Config
 	Configuration = Modules.Configuration or Configuration
+
+	ContentProvider = Services.ContentProvider
 end
 
 --// The callback is expected to return a nil value sometimes which should be ingored
@@ -117,9 +123,9 @@ function Hook:PatchFunctions()
 	--// Hook each function
 	for Func, CallBack in Patches do
 		local OldFunc = clonefunction(Func)
-		hookfunction(Func, function(...)
+		hookfunction(Func, newcclosure(function(...)
 			return CallBack(OldFunc, ...)
-		end)
+		end))
 	end
 end
 
@@ -230,8 +236,12 @@ function Hook:ConnectClientRecive(Remote)
 	--// Check if the Object has Remote class data
     local ClassData = Process:GetClassData(Remote)
     local IsRemoteFunction = ClassData.IsRemoteFunction
+	local NoReciveHook = ClassData.NoReciveHook
     local Method = ClassData.Receive[1]
 	local PreviousFunction = nil
+
+	--// Check if the Recive should be hooked
+	if NoReciveHook then return end
 
 	--// New callback function
 	local function Callback(...)
@@ -296,6 +306,10 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 		["AllRemoteData"] = function(Key: string, Value)
 			ProcessLib:SetAllRemoteData(Key, Value)
 		end,
+		["UpdateSpoofs"] = function(Content: string)
+			local Spoofs = loadstring(Content)()
+			ProcessLib:SetNewReturnSpoofs(Spoofs)
+		end
 	})
 	
 	--// Process configuration
