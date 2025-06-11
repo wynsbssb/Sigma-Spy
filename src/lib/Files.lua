@@ -71,6 +71,7 @@ end
 
 function Files:LoadCustomasset(Path: string): string?
 	if not getcustomasset then return end
+	if not Path then return end
 
 	--// Check content
 	local Content = readfile(Path)

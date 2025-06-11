@@ -254,7 +254,9 @@ function Generation:ApplyVariables(String: string, Variables: table, ...): strin
 			Value = Value(...)
 		end
 
-		String = String:gsub(`%%{Variable}%%`, Value)
+		String = String:gsub(`%%{Variable}%%`, function()
+			return Value
+		end)
 	end
 	return String
 end
