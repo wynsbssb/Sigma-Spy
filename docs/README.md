@@ -11,45 +11,48 @@ A complete Remote Spy with an incredible parser that captures incoming and outgo
 loadstring(game:HttpGet("https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main/Main.lua"))()
 ```
 
-## Notices
+## Notices 🔔
 - Sigma Spy will have bugs, please report any bugs by opening an [issue](https://github.com/depthso/Sigma-Spy/issues) on Github
 - If you gave a suggestion, please post it in the [discussions](https://github.com/depthso/Sigma-Spy/discussions)
 - If you have issues with the executor's comm library (get_comm_channel, create_comm_channel), enable `ForceUseCustomComm` in Sigma Spy/Config.lua which is found in your Executor's workspace folder after running
-- AWP is recommended to use
+- AWP and Zenith is recommended to use as of 11/06/25
 
 ## Features ⚡
 These are some of the many features Sigma Spy has
 | | |
 | ------------ | ------------- |
-| - **Actors** support | - **Keybinds** for toggling options
-| - **__index** and __namecall support | - **Dumping** logs to file
-| - **Decompile** large scripts | - Argument values for log titles
-| - **Block** remotes from firing | - Wide range of supported data types
-| - **Spoof** return values _(Return spoofs.lua)_ | Logging client recieves _(e.g **OnClientEvent**)_
-| - Variable compression in the parser | Remote stacking (Known as 'Grouping') _(optional)_
+| **Actors** support | **Keybinds** for toggling options
+| **__index** and __namecall support | **Dumping** logs to file
+| **Decompile** large scripts | Argument values for log titles
+| **Block** remotes from firing | Wide range of supported data types
+| **Spoof** return values _(Return spoofs.lua)_ | Logging client recieves _(e.g **OnClientEvent**)_
+| Variable compression in the parser | Remote stacking (Known as 'Grouping') _(optional)_
 | Mobile devices are supported | Pop-out editors
 
-
-.......
-
-## Screenshots
+## Screenshots 🖼️
 <table>
 	<tr>
 		<td>
 			<img src="/docs/images/Basic.png">
 		</td>
-		<td width="50%">
+		<td>
 			<img src="/docs/images/DecompileConnection.png">
       Pop-out Decompile with Connections viewer
 		</td>
-    <td width="50%">
-			<img src="/docs/images/PopoutWindows.png">
-      Mulitple Pop-out editors
-		</td>
 	</tr>
+  <tr>
+    <td>
+      <img src="/docs/images/PopoutWindows.png">
+      Mulitple Pop-out editors
+    </td>
+    <td>
+      <img src="https://github.com/user-attachments/assets/87d6b97f-320a-4bff-ab16-4bab1b397d07">
+      Executor function patches
+    </td>
+  </tr>
 </table>
 
-## Config.lua options
+## Config.lua options ⚙️
 <table>
   <tr>
     <th>Name</th>
@@ -85,13 +88,15 @@ These are some of the many features Sigma Spy has
 ## Required functions ⚠️
 Sigma spy will prompt you if your executor does not support it.
 Your executor must support these functions in order for it to function:
-| | |
+| Required | Optional |
 | ------------ | ------------- |
-| - hookmetamethod | - getconnections
-| - hookfunction | - newcclosure
-| - getrawmetatable | - getcustomasset *(Optional for the true ImGui theme)*
-| - setreadonly| - Comm library (get_comm_channel, create_comm_channel) *(Optional)*
-| - File library |
+| hookmetamethod | getcustomasset *(Optional for the true ImGui theme)*
+| hookfunction | Comm library (get_comm_channel, create_comm_channel) *(Optional)*
+| getrawmetatable | 
+| setreadonly| 
+| File library |
+| getconnections |
+| newcclosure |
 
 
 ## Libraries used
