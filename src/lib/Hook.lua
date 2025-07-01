@@ -134,8 +134,6 @@ function Hook:RunOnActors(Code: string, ChannelId: number)
 	
 	local Actors = getactors()
 	if not Actors then return end
-
-	writefile("ActorCode.lua", Code)
 	
 	for _, Actor in Actors do 
 		run_on_actor(Actor, Code, ChannelId)
