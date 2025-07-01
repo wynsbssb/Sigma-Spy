@@ -15,20 +15,14 @@ local Process
 local Configuration
 local Config
 
---// Services
-local ContentProvider
-
 local ExeENV = getfenv(1)
 
 function Hook:Init(Data)
     Modules = Data.Modules
-	Services = Data.Services
 
 	Process = Modules.Process
 	Config = Modules.Config or Config
 	Configuration = Modules.Configuration or Configuration
-
-	ContentProvider = Services.ContentProvider
 end
 
 --// The callback is expected to return a nil value sometimes which should be ingored
@@ -100,7 +94,7 @@ function Hook:PatchFunctions()
 			local Success, Error = Responce[1], Responce[2]
 
 			--// Patch c-closure error detection
-			if not Success and iscclosure(Func) then
+			if Success == false and iscclosure(Func) then
 				local NewError = Process:CleanCError(Error)
 				Responce[2] = NewError
 			end
@@ -113,7 +107,7 @@ function Hook:PatchFunctions()
 
 			--// __tostring ENV detection patch
 			if not checkcaller() and ENV == ExeENV then
-				return OldFunc(99999, ...)
+				return OldFunc(999999, ...)
 			end
 
 			return Process:Unpack(Responce)
@@ -140,6 +134,8 @@ function Hook:RunOnActors(Code: string, ChannelId: number)
 	
 	local Actors = getactors()
 	if not Actors then return end
+
+	writefile("ActorCode.lua", Code)
 	
 	for _, Actor in Actors do 
 		run_on_actor(Actor, Code, ChannelId)
@@ -208,18 +204,22 @@ function Hook:PushConfig(Overwrites)
     Merge(self, Overwrites)
 end
 
-function Hook:HookClientInvoke(Remote, Method, Callback): ((...any) -> ...any)?
+function Hook:HookClientInvoke(Remote, Method, Callback)
 	local Success, Function = pcall(function()
 		return getcallbackvalue(Remote, Method)
 	end)
 
 	--// Some executors like Potassium will throw a error if the Callback value is nil
 	if not Success then return end
-
-	local PreviousFunction = Function
+	
+	local HookSuccess = pcall(function()
+		self:HookFunction(Function, function(self, ...)
+			return Callback(...)
+		end)
+	end)
+	
+	if HookSuccess then return end
 	Remote[Method] = Callback
-
-	return PreviousFunction
 end
 
 function Hook:MultiConnect(Remotes)

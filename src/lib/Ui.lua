@@ -72,7 +72,7 @@ type Log = {
 local SetClipboard = setclipboard or toclipboard or set_clipboard
 
 --// Libraries
-local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'))()
+local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'), "ReGui")()
 
 --// Services
 local InsertService: InsertService
@@ -174,11 +174,7 @@ function Ui:LoadReGui()
 	ThemeConfig.TextFont = TextFont
 
 	--// ReGui
-	local PrefabsId = "rbxassetid://" .. ReGui.PrefabsId
 	ReGui:DefineTheme("SigmaSpy", ThemeConfig)
-	ReGui:Init({
-		Prefabs = InsertService:LoadLocalAsset(PrefabsId)
-	})
 end
 
 type CreateButtons = {
@@ -537,19 +533,6 @@ function Ui:MakeEditorTab(InfoSelector)
 		Text = Default
 	})
 
-	--// Configure IDE frame
-	ReGui:ApplyFlags({
-		Object = CodeEditor.Gui,
-		WindowClass = Window,
-		Class = {
-			--Border = true,
-			Fill = true,
-			Active = true,
-			Parent = EditorTab:GetObject(),
-			BackgroundTransparency = 1,
-		}
-	})
-
 	--// Buttons
 	local ButtonsRow = EditorTab:Row()
 	self:CreateButtons(ButtonsRow, {
@@ -570,7 +553,7 @@ function Ui:MakeEditorTab(InfoSelector)
 
 					--// Syntax check
 					if not Func then
-						self:ShowModal({"Running script!\n", Error})
+						self:ShowModal({"Error running script!\n", Error})
 						return
 					end
 
@@ -668,7 +651,7 @@ function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, s
 			Text = "Save",
 			Callback = function()
 				local Script = CodeEditor:GetText()
-				local Success, Error = loadstring(Script)
+				local Success, Error = loadstring(Script, "SigmaSpy-Editor")
 
 				--// Syntax check
 				if not Success then
@@ -793,7 +776,9 @@ function Ui:DisplayTable(Parent, Config: DisplayTableConfig): table
 			local Value = Catagory == "Name" and Name or DataTable[Name]
 			if not Value then continue end
 
-			Column:Label({Text=`{Value}`})
+			--// Create filtered label
+			local String = self:FilterName(`{Value}`, 150)
+			Column:Label({Text=String})
 		end
 	end
 
@@ -1085,12 +1070,11 @@ function Ui:ViewConnections(RemoteName: string, Signal: RBXScriptConnection)
 			})
 		end,
 		["Enabled"] = function(Row, Enabled, Connection)
-			local Base = "Set %s"
 			Row:Button({
-				Text = Base:format(Enabled and "Disabled" or "Enabled"),
+				Text = Enabled and "Disable" or "Enable",
 				Callback = function(self)
 					Enabled = not Enabled
-					self.Text = Base:format(Enabled and "Disabled" or "Enabled")
+					self.Text = Enabled and "Disable" or "Enable"
 
 					--// Enable or disable the connection
 					if Enabled then
