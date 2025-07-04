@@ -23,9 +23,9 @@
 local a,b={UseWorkspace=false,NoActors=false,FolderName='Sigma Spy',RepoUrl=
 [[https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main]],
 ParserUrl=
-[[https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main]]},{
-...}local c=b[1]if typeof(c)=='table'then for d,e in c do a[d]=e end end local d
-=setmetatable({},{__index=function(d,e)local f=game:GetService(e)return
+[[https://github.com/depthso/Roblox-parser/raw/32eb8e3ca74a1210d74ed0c54479b5147647a0e4]]
+},{...}local c=b[1]if typeof(c)=='table'then for d,e in c do a[d]=e end end
+local d=setmetatable({},{__index=function(d,e)local f=game:GetService(e)return
 cloneref(f)end})local e=(function()local e,f={UseWorkspace=false,Folder=
 'Sigma spy',RepoUrl=nil,FolderStructure={['Sigma Spy']={'assets'}}}function e:
 Init(g)local h,i=self.FolderStructure,g.Services f=i.HttpService self:
