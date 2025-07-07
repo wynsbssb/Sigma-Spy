@@ -82,6 +82,7 @@ end
 
 --// This includes a few patches for executor functions that result in detection
 --// This isn't bulletproof since some functions like hookfunction I can't patch
+--// By the way, thanks for copying this guys! Super appreciate the copycat
 function Hook:PatchFunctions()
 	--// Check if this function is disabled in the configuration
 	if Config.NoFunctionPatching then return end
@@ -92,16 +93,35 @@ function Hook:PatchFunctions()
 		[pcall] =  function(OldFunc, Func, ...)
 			local Responce = {OldFunc(Func, ...)}
 			local Success, Error = Responce[1], Responce[2]
+			local IsC = iscclosure(Func)
 
 			--// Patch c-closure error detection
-			if Success == false and iscclosure(Func) then
+			if Success == false and IsC then
 				local NewError = Process:CleanCError(Error)
 				Responce[2] = NewError
+			end
+
+			--// Stack-overflow detection patch
+			if Success == false and not IsC and Error:find("C stack overflow") then
+				local Tracetable = Error:split(":")
+				local Caller, Line = Tracetable[1], Tracetable[2]
+
+				local Count = Process:CountMatches(Error, Caller)
+				if Count == 196 then
+					Responce[2] = `{Caller}:{Line}: {Error}`
+				end
 			end
 
 			return Process:Unpack(Responce)
 		end,
 		[getfenv] = function(OldFunc, Level: number, ...)
+			Level = Level or 1
+
+			--// Prevent catpure of executor's env
+			if type(Level) == "number" then
+				Level += 2
+			end
+
 			local Responce = {OldFunc(Level, ...)}
 			local ENV = Responce[1]
 
@@ -134,6 +154,8 @@ function Hook:RunOnActors(Code: string, ChannelId: number)
 	
 	local Actors = getactors()
 	if not Actors then return end
+
+	writefile("ActorCode.lua", Code)
 	
 	for _, Actor in Actors do 
 		run_on_actor(Actor, Code, ChannelId)

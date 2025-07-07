@@ -4,7 +4,7 @@ local Configuration = {
 	NoActors = false,
 	FolderName = "Sigma Spy",
 	RepoUrl = "https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main",
-	ParserUrl = "https://github.com/depthso/Roblox-parser/raw/32eb8e3ca74a1210d74ed0c54479b5147647a0e4"
+	ParserUrl = "https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main/dist/Main.luau"
 }
 
 --// Load overwrites

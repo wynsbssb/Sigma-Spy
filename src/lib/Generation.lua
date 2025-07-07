@@ -102,21 +102,8 @@ function Generation:WriteDump(Content: string): string
 	return FilePath
 end
 
-function Generation:LoadParser(ImportUrl: string)
-	local MainPath = `{ImportUrl}/main.lua`
-	local MainContent = game:HttpGet(MainPath)
-	ParserModule = loadstring(MainContent, "Parser")()
-	
-	--// Configure Parser imports to use game:HttpGet
-	function ParserModule:Import(Name: string)
-		local Url = `{ImportUrl}/{Name}.lua`
-		local Content = game:HttpGet(Url)
-		local Closure = loadstring(Content, Name)
-		return Closure()
-	end
-
-	--// Load parser module
-	ParserModule:Load()
+function Generation:LoadParser(ModuleUrl: string)
+	ParserModule = loadstring(game:HttpGet(ModuleUrl), "Parser")()
 end
 
 function Generation:MakeValueSwapsTable(): table

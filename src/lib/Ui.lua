@@ -2,6 +2,8 @@ local Ui = {
 	DefaultEditorContent = [=[--[[ 
 	Welcome to Sigma Spy
 	Created by depso!
+
+	Thanks for copying my work guys!
 ]] ]=],
 	LogLimit = 100,
     SeasonLabels = { 

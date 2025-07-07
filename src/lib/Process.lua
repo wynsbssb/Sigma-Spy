@@ -138,6 +138,15 @@ function Process:CleanCError(Error: string): string
     return Error
 end
 
+function Process:CountMatches(String: string, Match: string): number
+	local Count = 0
+	for _ in String:gmatch(Match) do
+		Count +=1 
+	end
+
+	return Count
+end
+
 function Process:DeepCloneTable(Table, Ignore: table?)
 	local New = {}
 	for Key, Value in next, Table do
