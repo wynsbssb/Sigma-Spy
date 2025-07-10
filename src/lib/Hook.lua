@@ -1,6 +1,6 @@
 local Hook = {
-	OrignalNamecall = nil,
-	OrignalIndex = nil,
+	OriginalNamecall = nil,
+	OriginalIndex = nil,
 }
 
 type table = {
@@ -14,6 +14,7 @@ local Modules
 local Process
 local Configuration
 local Config
+local Communication
 
 local ExeENV = getfenv(1)
 
@@ -21,6 +22,7 @@ function Hook:Init(Data)
     Modules = Data.Modules
 
 	Process = Modules.Process
+	Communication = Modules.Communication or Communication
 	Config = Modules.Config or Config
 	Configuration = Modules.Configuration or Configuration
 end
@@ -98,6 +100,7 @@ function Hook:PatchFunctions()
 			--// Patch c-closure error detection
 			if Success == false and IsC then
 				local NewError = Process:CleanCError(Error)
+				Communication:ConsolePrint("C-Closure error patched")
 				Responce[2] = NewError
 			end
 
@@ -107,7 +110,9 @@ function Hook:PatchFunctions()
 				local Caller, Line = Tracetable[1], Tracetable[2]
 
 				local Count = Process:CountMatches(Error, Caller)
+
 				if Count == 196 then
+					Communication:ConsolePrint("C stack overflow patched")
 					Responce[2] = `{Caller}:{Line}: {Error}`
 				end
 			end
@@ -127,6 +132,7 @@ function Hook:PatchFunctions()
 
 			--// __tostring ENV detection patch
 			if not checkcaller() and ENV == ExeENV then
+				Communication:ConsolePrint("ENV escape patched")
 				return OldFunc(999999, ...)
 			end
 
@@ -154,8 +160,6 @@ function Hook:RunOnActors(Code: string, ChannelId: number)
 	
 	local Actors = getactors()
 	if not Actors then return end
-
-	writefile("ActorCode.lua", Code)
 	
 	for _, Actor in Actors do 
 		run_on_actor(Actor, Code, ChannelId)
@@ -211,8 +215,8 @@ function Hook:BeginHooks()
 	end)
 
 	Merge(self, {
-		OrignalNamecall = OriginalNameCall,
-		--OrignalIndex = Oi
+		OriginalNamecall = OriginalNameCall,
+		--OriginalIndex = Oi
 	})
 end
 
@@ -345,7 +349,6 @@ end
 function Hook:LoadMetaHooks(ActorCode: string, ChannelId: number)
 	--// Hook actors
 	if not Configuration.NoActors then
-		wait()
 		self:RunOnActors(ActorCode, ChannelId)
 	end
 

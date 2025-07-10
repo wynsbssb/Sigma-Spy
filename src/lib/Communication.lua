@@ -182,8 +182,8 @@ function Module:SetChannel(NewChannel: number)
     Channel = NewChannel
 end
 
-function Module:Warn(...)
-    self:Communicate("Warn", ...)
+function Module:ConsolePrint(...)
+    self:Communicate("Print", ...)
 end
 
 function Module:QueueLog(Data)

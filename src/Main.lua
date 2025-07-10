@@ -89,6 +89,9 @@ local ChannelId, Event = Communication:CreateChannel()
 Communication:AddCommCallback("QueueLog", function(...)
 	Ui:QueueLog(...)
 end)
+Communication:AddCommCallback("Print", function(...)
+	Ui:ConsoleLog(...)
+end)
 
 --// Generation swaps
 local LocalPlayer = Players.LocalPlayer

@@ -5,6 +5,7 @@ type table = {
 type RemoteData = {
 	Remote: Instance,
 	IsReceive: boolean?,
+	MetaMethod: string,
 	Args: table,
 	Method: string,
     TransferType: string,
@@ -62,7 +63,8 @@ local Hook
 local ParserModule
 local ThisScript = script
 
-local function Merge(Base: table, New: table)
+local function Merge(Base: table, New: table?)
+	if not New then return end
 	for Key, Value in next, New do
 		Base[Key] = Value
 	end
@@ -151,7 +153,7 @@ function Generation:PickVariableName(): string
 	return Names[math.random(1, #Names)]
 end
 
-function Generation:NewParser(Extra: table)
+function Generation:NewParser(Extra: table?)
 	local VariableName = self:PickVariableName()
 	local Swaps = self:GetSwaps()
 
@@ -177,7 +179,8 @@ end
 type CallInfo = {
 	Arguments: table,
 	Indent: number,
-	RemoteVariable: string
+	RemoteVariable: string,
+	Module: table
 }
 function Generation:CallRemoteScript(Data, Info: CallInfo): string
 	local IsReceive = Data.IsReceive
@@ -421,39 +424,34 @@ end
 
 function Generation:AdvancedInfo(Module, Data: table): string
 	--// Unpack remote data
-	local MetaMethod = Data.MetaMethod
 	local Function = Data.CallingFunction
 	local ClassData = Data.ClassData
-	local Method = Data.Method
 	local Remote = Data.Remote
-	local Script = Data.CallingScript
-	local SourceScript = Data.SourceScript
-	local Id = Data.Id
 	local Args = Data.Args
 	
 	--// Advanced info table base
 	local FunctionInfo = {
 		["Caller"] = {
-			["SourceScript"] = SourceScript,
-			["CallingScript"] = Script,
-			["CallingFunction"] = Function
+			["SourceScript"] = Data.SourceScript,
+			["CallingScript"] = Data.CallingScript,
+			["CallingFunction"] = 
 		},
 		["Remote"] = {
 			["Remote"] = Remote,
-			["RemoteID"] = Id,
-			["Method"] = Method,
+			["RemoteID"] = Data.Id,
+			["Method"] = Data.Method,
 			["Connections"] = self:ConnectionInfo(Remote, ClassData)
 		},
 		["Arguments"] = {
 			["Length"] = #Args,
 			["Types"] = self:MakeTypesTable(Args),
 		},
-		["MetaMethod"] = MetaMethod,
+		["MetaMethod"] = Data.MetaMethod,
 		["IsActor"] = Data.IsActor,
 	}
 
 	--// Some closures may not be lua
-	if islclosure(Function) then
+	if Function and islclosure(Function) then
 		FunctionInfo["UpValues"] = debug.getupvalues(Function)
 		FunctionInfo["Constants"] = debug.getconstants(Function)
 	end

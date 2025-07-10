@@ -1,24 +1,19 @@
 local Ui = {
-	DefaultEditorContent = [=[--[[ 
-	Welcome to Sigma Spy
-	Created by depso!
-
-	Thanks for copying my work guys!
-]] ]=],
+	DefaultEditorContent = "-- Jesus loves you",
 	LogLimit = 100,
     SeasonLabels = { 
-        January = "⛄%s⛄", 
-        February = "🌨️%s🏂", 
-        March = "🌹%s🌺", 
-        April = "🐣%s✝️", 
-        May = "🐝%s🌞", 
-        June = "🌲%s🥕", 
-        July = "🌊%s🌅", 
-        August = "☀️%s🌞", 
-        September = "🍁%s🍁", 
-        October = "🎃%s🎃", 
-        November = "🍂%s🍂", 
-        December = "🎄%s🎁"
+        January = "⛄ %s ⛄", 
+        February = "🌨️ %s 🏂", 
+        March = "🌹 %s🌺 ", 
+        April = "🐣 %s ✝️", 
+        May = "🐝 %s 🌞", 
+        June = "🌲 %s 🥕", 
+        July = "🌊 %s 🌅", 
+        August = "☀️ %s 🌞", 
+        September = "🍁 %s 🍁", 
+        October = "🎃 %s 🎃", 
+        November = "🍂 %s 🍂", 
+        December = "🎄 %s 🎁"
     },
 	Scales = {
 		["Mobile"] = UDim2.fromOffset(480, 280),
@@ -26,6 +21,7 @@ local Ui = {
 	},
     BaseConfig = {
         Theme = "SigmaSpy",
+		Title = "Sigma Spy | Created by depso",
         NoScroll = true,
     },
 	OptionTypes = {
@@ -74,10 +70,7 @@ type Log = {
 local SetClipboard = setclipboard or toclipboard or set_clipboard
 
 --// Libraries
-local ReGui = loadstring(game:HttpGet('https://raw.githubusercontent.com/depthso/Dear-ReGui/refs/heads/main/ReGui.lua'), "ReGui")()
-
---// Services
-local InsertService: InsertService
+local ReGui = loadstring(game:HttpGet('https://github.com/depthso/Dear-ReGui/raw/refs/heads/main/ReGui.lua'), "ReGui")()
 
 --// Modules
 local Flags
@@ -97,10 +90,6 @@ local CommChannel
 
 function Ui:Init(Data)
     local Modules = Data.Modules
-	local Services = Data.Services
-
-	--// Services
-	InsertService = Services.InsertService
 
 	--// Modules
 	Flags = Modules.Flags
@@ -112,9 +101,9 @@ function Ui:Init(Data)
 	Files = Modules.Files
 
 	--// ReGui
-	self:CheckScale()
 	self:LoadFont()
 	self:LoadReGui()
+	self:CheckScale()
 end
 
 function Ui:SetCommChannel(NewCommChannel: BindableEvent)
@@ -208,15 +197,12 @@ function Ui:CreateButtons(Parent, Data: CreateButtons)
 	end
 end
 
-function Ui:CreateWindow(Overwrites: table)
+function Ui:CreateWindow()
     local BaseConfig = self.BaseConfig
 	local Config = Process:DeepCloneTable(BaseConfig)
+	local Seasonal = self:TurnSeasonal(Config.Title)
+	Config.Title = Seasonal
 
-	--// Merge overwrites
-	if Overwrites then
-		Merge(Config, Overwrites)
-	end
-	
 	--// Create Window
 	local Window = ReGui:Window(Config)
 
@@ -235,7 +221,7 @@ function Ui:CreateMainWindow()
 
 	--// Check if the font was successfully downloaded
 	self:FontWasSuccessful()
-	self:AuraCounterService()
+	--self:AuraCounterService()
 
 	--// UiVisible flag callback
 	Flags:SetFlagCallback("UiVisible", function(self, Visible)
@@ -376,7 +362,7 @@ function Ui:DisplayAura()
     local AURADELAY = Rand:NextInteger(1, 5)
 
 	--// Title
-	local Title = ` Sigma Spy - Depso | AURA: {AURA} `
+	local Title = `Sigma Spy - Depso | AURA: {AURA}`
 	local Seasonal = self:TurnSeasonal(Title)
     Window:SetTitle(Seasonal)
 
@@ -422,17 +408,72 @@ function Ui:CreateWindowContent(Window)
 	--// Make tabs
 	self:MakeEditorTab(InfoSelector)
 	self:MakeOptionsTab(InfoSelector)
+	
+	if Config.Debug then
+		self:ConsoleTab(InfoSelector)
+	end
+end
+
+function Ui:ConsoleTab(InfoSelector)
+	local Tab = InfoSelector:CreateTab({
+		Name = "Console"
+	})
+
+	local ButtonsRow = Tab:Row()
+	ButtonsRow:Button({
+		Text = "Clear",
+		Callback = function()
+			self.Console:Clear()
+		end
+	})
+	ButtonsRow:Button({
+		Text = "Copy",
+		Callback = function()
+			local Content = self.Console:GetValue()
+			toclipboard(Content)
+		end
+	})
+	ButtonsRow:Button({
+		Text = "Pause",
+		Callback = function(self)
+			local Enabled = not self.Console.Enabled
+			local Text = Enabled and "Paused" or "Pause"
+			self.Text = Text
+
+			--// Update console
+			self.Console.Enabled = Enabled
+		end,
+	})
+	ButtonsRow:Expand()
+
+	--// Create console
+	self.Console = Tab:Console({
+		Text = "-- Created by depso",
+		ReadOnly = true,
+		Border = false,
+		Fill = true,
+		Enabled = true,
+		AutoScroll = true,
+		RichText = true,
+		MaxLines = 50
+	})
+end
+
+function Ui:ConsoleLog(...: string?)
+	local Console = self.Console
+	if not Console then return end
+
+	Console:AppendText(...)
 end
 
 function Ui:MakeOptionsTab(InfoSelector)
-	--// TabSelector
-	local OptionsTab = InfoSelector:CreateTab({
+	local Tab = InfoSelector:CreateTab({
 		Name = "Options"
 	})
 
 	--// Add global options
-	OptionsTab:Separator({Text="Logs"})
-	self:CreateButtons(OptionsTab, {
+	Tab:Separator({Text="Logs"})
+	self:CreateButtons(Tab, {
 		Base = {
 			Size = UDim2.new(1, 0, 0, 20),
 			AutomaticSize = Enum.AutomaticSize.Y,
@@ -490,10 +531,10 @@ function Ui:MakeOptionsTab(InfoSelector)
 	})
 
 	--// Flag options
-	OptionsTab:Separator({Text="Settings"})
-	self:CreateElements(OptionsTab, Flags:GetFlags())
+	Tab:Separator({Text="Settings"})
+	self:CreateElements(Tab, Flags:GetFlags())
 
-	self:AddDetailsSection(OptionsTab)
+	self:AddDetailsSection(Tab)
 end
 
 function Ui:AddDetailsSection(OptionsTab)
@@ -502,7 +543,7 @@ function Ui:AddDetailsSection(OptionsTab)
 		Rows = {
 			"Sigma spy - Written by depso!",
 			"Libraries: Roblox-Parser, Dear-ReGui",
-			"Thank you to syn for your suggestions and testing"
+			"Thank you syn.lua for suggesting I make this"
 		}
 	})
 end
@@ -516,8 +557,6 @@ end
 
 function Ui:MakeEditorTab(InfoSelector)
 	local Default = self.DefaultEditorContent
-	local Window = self.Window
-
 	local SyntaxColors = Config.SyntaxColors
 
 	--// Create tab
@@ -605,13 +644,14 @@ end
 function Ui:MakeEditorPopoutWindow(Content: string, WindowConfig: table)
 	local Window = self:CreateWindow(WindowConfig)
 	local Buttons = WindowConfig.Buttons or {}
+	local Colors = Config.SyntaxColors
 
 	local CodeEditor = Window:CodeEditor({
 		Text = Content,
 		Editable = true,
 		Fill = true,
 		FontSize = 13,
-		Colors = SyntaxColors,
+		Colors = Colors,
 		FontFace = TextFont
 	})
 
@@ -632,11 +672,12 @@ function Ui:MakeEditorPopoutWindow(Content: string, WindowConfig: table)
 	})
 
 	Window:Center()
-	return CodeEditor
+	return CodeEditor, Window
 end
 
 function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, string) -> nil)?)
 	local Folder = Files.FolderName
+	local CodeEditor, Window
 
 	--// Relative to Sigma Spy folder
 	if InFolder then
@@ -646,8 +687,7 @@ function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, s
 	--// Get file content
 	local Content = readfile(FilePath)
 	Content = Content:gsub("\r\n", "\n")
-
-	local CodeEditor
+	
 	local Buttons = {
 		{
 			Text = "Save",
@@ -673,7 +713,7 @@ function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, s
 	}
 
 	--// Create Editor Window
-	CodeEditor = self:MakeEditorPopoutWindow(Content, {
+	CodeEditor, Window = self:MakeEditorPopoutWindow(Content, {
 		Title = `Editing: {FilePath}`,
 		Buttons = Buttons
 	})
@@ -730,7 +770,7 @@ function Ui:MakeTableHeaders(Table, Rows: table)
 	end
 end
 
-function Ui:Decompile(Editor: table, Script: script)
+function Ui:Decompile(Editor: table, Script: Script)
 	local Header = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)"
 	Editor:SetText("--Decompiling... +9999999 AURA (mango phonk)")
 
@@ -793,7 +833,6 @@ function Ui:SetFocusedRemote(Data)
 	local Method = Data.Method
 	local IsReceive = Data.IsReceive
 	local Script = Data.CallingScript
-	local SourceScript = Data.SourceScript
 	local ClassData = Data.ClassData
 	local HeaderData = Data.HeaderData
 	local ValueSwaps = Data.ValueSwaps
@@ -833,7 +872,7 @@ function Ui:SetFocusedRemote(Data)
 	Data.Tab = Tab
 	Data.Selectable:SetSelected(true)
 
-	local function SetIDEText(Content: string, Task: string)
+	local function SetIDEText(Content: string, Task: string?)
 		Data.Task = Task or "Sigma Spy"
 		CodeEditor:SetText(Content)
 	end
@@ -843,7 +882,7 @@ function Ui:SetFocusedRemote(Data)
 			return Data[Name](Data, Process:Unpack(Args))
 		end
 	end
-	local function ScriptCheck(Script, NoMissingCheck: boolean): boolean
+	local function ScriptCheck(Script, NoMissingCheck: boolean): boolean?
 		--// Reject client events
 		if IsReceive then 
 			Ui:ShowModal({
@@ -947,7 +986,7 @@ function Ui:SetFocusedRemote(Data)
 		
 		--// Automatically Pop-out the editor for decompiling if enabled
 		if DecompilePopout then
-			Editor = Ui:MakeEditorPopoutWindow(Decompiled, {
+			Editor = Ui:MakeEditorPopoutWindow("", {
 				Title = Task
 			})
 		end
@@ -1028,7 +1067,7 @@ function Ui:SetFocusedRemote(Data)
 	--// Arguments table script
 	if TableArgs then
 		local Parsed = Generation:TableScript(Module, Args)
-		SetIDEText(Parsed)
+		SetIDEText(Parsed, `Arguments for {RemoteName}`)
 		return
 	end
 

@@ -4,6 +4,7 @@ type table = {
 
 type RemoteData = {
 	Remote: Instance,
+    NoBacktrace: boolean?,
 	IsReceive: boolean?,
 	Args: table,
     Id: string,
@@ -281,7 +282,6 @@ function Process:GetRemoteSpoof(Remote: Instance, Method: string, ...): table?
         ReturnValues = ReturnValues(...)
     end
 
-	--Communication:Warn("Spoofed", Method)
 	return ReturnValues
 end
 
@@ -332,7 +332,7 @@ function Process:Callback(Data: RemoteData, ...): table?
     }
 end
 
-function Process:Decompile(Script: Script): string
+function Process:Decompile(Script: LocalScript | ModuleScript): string
     local KonstantAPI = "http://api.plusgiant5.com/konstant/decompile"
     local ForceKonstant = Config.ForceKonstantDecompiler
 
@@ -370,17 +370,20 @@ function Process:Decompile(Script: Script): string
 end
 
 function Process:GetScriptFromFunc(Func: (...any) -> ...any)
-    local ENV = getfenv(Func)
-    if self:IsSigmaSpyENV(ENV) then 
-        return 
-    end
+    if not Func then return end
+
+    local Success, ENV = pcall(getfenv, Func)
+    if not Success then return end
+    
+    --// Blacklist sigma spy
+    if self:IsSigmaSpyENV(ENV) then return end
 
     return rawget(ENV, "script")
 end
 
 function Process:ConnectionIsValid(Connection: table): boolean
     local ValueReplacements = {
-		["Script"] = function(Connection: table): script?
+		["Script"] = function(Connection: table): Script?
 			local Function = Connection.Function
 			if not Function then return end
 
@@ -392,9 +395,9 @@ function Process:ConnectionIsValid(Connection: table): boolean
     local ToCheck = {
         "Script"
     }
-
     for _, Property in ToCheck do
         local Replacement = ValueReplacements[Property]
+        local Value
 
         --// Check if there's a function for a property
         if Replacement then
@@ -410,7 +413,7 @@ function Process:ConnectionIsValid(Connection: table): boolean
     return true
 end
 
-function Process:FilterConnections(Signal: RBXScriptConnection): table
+function Process:FilterConnections(Signal: RBXScriptSignal): table
     local Processed = {}
 
     --// Filter each connection
@@ -423,7 +426,7 @@ function Process:FilterConnections(Signal: RBXScriptConnection): table
 end
 
 function Process:IsSigmaSpyENV(Env: table): boolean
-    return ENV == SigmaENV
+    return Env == SigmaENV
 end
 
 function Process:ProcessRemote(Data: RemoteData, ...): table?
@@ -431,6 +434,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     local Remote = Data.Remote
 	local Method = Data.Method
     local TransferType = Data.TransferType
+    local IsReceive = Data.IsReceive
 
 	--// Check if the transfertype method is allowed
 	if TransferType and not self:RemoteAllowed(Remote, TransferType, Method) then return end
@@ -440,6 +444,9 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     local ClassData = self:GetClassData(Remote)
     local Timestamp = tick()
 
+    local CallingFunction
+    local SourceScript
+
     --// Add extra data into the log if needed
     local ExtraData = self.ExtraData
     if ExtraData then
@@ -447,10 +454,9 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     end
 
     --// Get caller information
-    local CallingFunction = self:FindCallingLClosure(6)
-    local SourceScript
-    if CallingFunction then
-        SourceScript = self:GetScriptFromFunc(CallingFunction)
+    if not IsReceive then
+        CallingFunction = self:FindCallingLClosure(6)
+        SourceScript = CallingFunction and self:GetScriptFromFunc(CallingFunction) or nil
     end
 
     --// Add to queue
