@@ -434,7 +434,7 @@ function Generation:AdvancedInfo(Module, Data: table): string
 		["Caller"] = {
 			["SourceScript"] = Data.SourceScript,
 			["CallingScript"] = Data.CallingScript,
-			["CallingFunction"] = 
+			["CallingFunction"] = Function
 		},
 		["Remote"] = {
 			["Remote"] = Remote,

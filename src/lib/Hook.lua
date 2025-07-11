@@ -100,7 +100,7 @@ function Hook:PatchFunctions()
 			--// Patch c-closure error detection
 			if Success == false and IsC then
 				local NewError = Process:CleanCError(Error)
-				Communication:ConsolePrint("C-Closure error patched")
+				
 				Responce[2] = NewError
 			end
 

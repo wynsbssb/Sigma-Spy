@@ -193,8 +193,8 @@ function Files:LoadLibraries(Scripts: table, ...): table
 		end
 
 		--// Compile library 
-		local Closure = loadstring(Content, Name)
-		assert(Closure, `Failed to load {Name}`)
+		local Closure, Error = loadstring(Content, Name)
+		assert(Closure, `Failed to load {Name}: {Error}`)
 
 		Modules[Name] = Closure(...)
 	end

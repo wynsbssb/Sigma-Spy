@@ -455,7 +455,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
 
     --// Get caller information
     if not IsReceive then
-        CallingFunction = self:FindCallingLClosure(6)
+        CallingFunction = self:FindCallingLClosure(0x6)
         SourceScript = CallingFunction and self:GetScriptFromFunc(CallingFunction) or nil
     end
 
