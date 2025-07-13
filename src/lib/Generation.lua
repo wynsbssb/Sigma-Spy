@@ -15,7 +15,8 @@ type RemoteData = {
 
 --// Module
 local Generation = {
-	DumpBaseName = "SigmaSpy-Dump %s.lua",
+	DumpBaseName = "SigmaSpy-Dump %s.lua", -- "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
+	Header = "-- Generated with Sigma Spy Github: https://github.com/depthso/Sigma-Spy\n",
 	ScriptTemplates = {
 		["Remote"] = {
 			{"%RemoteCall%"}
@@ -61,6 +62,7 @@ local Generation = {
 local Config
 local Hook
 local ParserModule
+local Flags
 local ThisScript = script
 
 local function Merge(Base: table, New: table?)
@@ -77,6 +79,7 @@ function Generation:Init(Data: table)
 	--// Modules
 	Config = Modules.Config
 	Hook = Modules.Hook
+	Flags = Modules.Flags
 	
 	--// Import parser
 	local ParserUrl = Configuration.ParserUrl
@@ -118,13 +121,15 @@ function Generation:SetSwapsCallback(Callback: (Interface: table) -> ())
 end
 
 function Generation:GetBase(Module): (string, boolean)
-	--local Code = "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
-	local Code = "-- Generated with Sigma Spy Github: https://github.com/depthso/Sigma-Spy\n"
+	local NoComments = Flags:GetFlagValue("NoComments")
+	local Header = self.Header
+
+	local Code = NoComments and "" or Header
 
 	--// Generate variables code
 	local Variables = Module.Parser:MakeVariableCode({
 		"Services", "Remote", "Variables"
-	})
+	}, NoComments)
 
 	local NoVariables = Variables == ""
 	Code ..= Variables

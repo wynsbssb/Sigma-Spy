@@ -13,13 +13,17 @@ type table = {
 
 local Module = {
     Flags = {
-        PreventRenaming = {
+        -- PreventRenaming = {
+        --     Value = false,
+        --     Label = "No renaming",
+        -- },
+        -- PreventParenting = {
+        --     Value = false,
+        --     Label = "No parenting",
+        -- },
+        NoComments = {
             Value = false,
-            Label = "No renaming",
-        },
-        PreventParenting = {
-            Value = false,
-            Label = "No parenting",
+            Label = "No comments",
         },
         SelectNewest = {
             Value = false,

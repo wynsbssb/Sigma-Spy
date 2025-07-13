@@ -167,7 +167,13 @@ function Files:GetModule(Name: string, TemplateName: string): string
 	--// The file will be declared local if the template argument is provided
 	if TemplateName then
 		self:TemplateCheck(Path, TemplateName)
-		return readfile(Path)
+
+		--// Check if it successfuly loads
+		local Content = readfile(Path)
+		local Success = loadstring(Content)
+		if Success then return Content end
+
+		return self:GetTemplate(TemplateName)
 	end
 
 	return self:GetFile(Path)

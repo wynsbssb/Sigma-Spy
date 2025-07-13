@@ -108,7 +108,6 @@ function Hook:PatchFunctions()
 			if Success == false and not IsC and Error:find("C stack overflow") then
 				local Tracetable = Error:split(":")
 				local Caller, Line = Tracetable[1], Tracetable[2]
-
 				local Count = Process:CountMatches(Error, Caller)
 
 				if Count == 196 then
@@ -156,13 +155,13 @@ local function Merge(Base: table, New: table)
 end
 
 function Hook:RunOnActors(Code: string, ChannelId: number)
-	if not getactors then return end
+	if not getactors or not run_on_actor then return end
 	
 	local Actors = getactors()
 	if not Actors then return end
 	
 	for _, Actor in Actors do 
-		run_on_actor(Actor, Code, ChannelId)
+		pcall(run_on_actor, Actor, Code, ChannelId)
 	end
 end
 
