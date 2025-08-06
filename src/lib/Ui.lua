@@ -21,7 +21,7 @@ local Ui = {
 	},
     BaseConfig = {
         Theme = "SigmaSpy",
-		Title = "Sigma Spy | Created by depso",
+		Title = "Sigma Spy BETA | Created by depso",
         NoScroll = true,
     },
 	OptionTypes = {
@@ -419,35 +419,37 @@ function Ui:ConsoleTab(InfoSelector)
 		Name = "Console"
 	})
 
+	local Console
 	local ButtonsRow = Tab:Row()
+
 	ButtonsRow:Button({
 		Text = "Clear",
 		Callback = function()
-			self.Console:Clear()
+			Console:Clear()
 		end
 	})
 	ButtonsRow:Button({
 		Text = "Copy",
 		Callback = function()
-			local Content = self.Console:GetValue()
+			local Content = Console:GetValue()
 			toclipboard(Content)
 		end
 	})
 	ButtonsRow:Button({
 		Text = "Pause",
 		Callback = function(self)
-			local Enabled = not self.Console.Enabled
-			local Text = Enabled and "Paused" or "Pause"
+			local Enabled = not Console.Enabled
+			local Text = Enabled and "Pause" or "Paused"
 			self.Text = Text
 
 			--// Update console
-			self.Console.Enabled = Enabled
+			Console.Enabled = Enabled
 		end,
 	})
 	ButtonsRow:Expand()
 
 	--// Create console
-	self.Console = Tab:Console({
+	Console = Tab:Console({
 		Text = "-- Created by depso",
 		ReadOnly = true,
 		Border = false,
@@ -457,6 +459,8 @@ function Ui:ConsoleTab(InfoSelector)
 		RichText = true,
 		MaxLines = 50
 	})
+
+	self.Console = Console
 end
 
 function Ui:ConsoleLog(...: string?)

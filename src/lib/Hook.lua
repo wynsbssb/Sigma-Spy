@@ -1,3 +1,10 @@
+--[[
+
+	Taking my methods 💖💖
+	I love a paster and a skid, puts disgust in my face
+
+]]
+
 local Hook = {
 	OriginalNamecall = nil,
 	OriginalIndex = nil,
@@ -143,9 +150,9 @@ function Hook:PatchFunctions()
 				local Caller, Line = Tracetable[1], Tracetable[2]
 				local Count = Process:CountMatches(Error, Caller)
 
-				if Count == 195 then
+				if Count == 196 then
 					Communication:ConsolePrint("C stack overflow patched")
-					Responce[2] = `{Caller}:{Line}: {Error}`
+					Responce[2] = Error:gsub(`{Caller}:{Line}: `, Caller, 1)
 				end
 			end
 
@@ -180,7 +187,7 @@ function Hook:PatchFunctions()
 		end)
 
 		--// Cache previous function
-		self.PreviousFunctions[Func] = self
+		self.PreviousFunctions[Func] = OldFunc
 	end
 end
 
