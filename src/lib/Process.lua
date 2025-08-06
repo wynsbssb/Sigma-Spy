@@ -290,6 +290,7 @@ function Process:SetNewReturnSpoofs(NewReturnSpoofs: table)
 end
 
 function Process:FindCallingLClosure(Offset: number)
+    local Getfenv = Hook:GetOriginalFunc(getfenv)
     Offset += 1
 
     while true do
@@ -302,34 +303,10 @@ function Process:FindCallingLClosure(Offset: number)
         --// Check if the function is valid
         local Function = debug.info(Offset, "f")
         if not Function then return end
+        if Getfenv(Function) == SigmaENV then continue end
 
         return Function
     end
-end
-
-function Process:Callback(Data: RemoteData, ...): table?
-    --// Unpack Data
-    local OriginalFunc = Data.OriginalFunc
-    local Id = Data.Id
-    local Method = Data.Method
-    local Remote = Data.Remote
-
-    local RemoteData = self:GetRemoteData(Id)
-
-    --// Check if the Remote is Blocked
-    if RemoteData.Blocked then return {} end
-
-    --// Check for a spoof
-    local Spoof = self:GetRemoteSpoof(Remote, Method, OriginalFunc, ...)
-    if Spoof then return Spoof end
-
-    --// Check if the orignal function was passed
-    if not OriginalFunc then return end
-
-    --// Invoke orignal function
-    return {
-        OriginalFunc(Remote, ...)
-    }
 end
 
 function Process:Decompile(Script: LocalScript | ModuleScript): string
@@ -429,6 +406,48 @@ function Process:IsSigmaSpyENV(Env: table): boolean
     return Env == SigmaENV
 end
 
+function Process:GetRemoteData(Id: string)
+    local RemoteOptions = self.RemoteOptions
+
+    --// Check for existing remote data
+	local Existing = RemoteOptions[Id]
+	if Existing then return Existing end
+	
+    --// Base remote data
+	local Data = {
+		Excluded = false,
+		Blocked = false
+	}
+
+	RemoteOptions[Id] = Data
+	return Data
+end
+
+local ProcessCallback = newcclosure(function(Data: RemoteData, ...): table?
+    --// Unpack Data
+    local OriginalFunc = Data.OriginalFunc
+    local Id = Data.Id
+    local Method = Data.Method
+    local Remote = Data.Remote
+
+    local RemoteData = Process:GetRemoteData(Id)
+
+    --// Check if the Remote is Blocked
+    if RemoteData.Blocked then return {} end
+
+    --// Check for a spoof
+    local Spoof = Process:GetRemoteSpoof(Remote, Method, OriginalFunc, ...)
+    if Spoof then return Spoof end
+
+    --// Check if the orignal function was passed
+    if not OriginalFunc then return end
+
+    --// Invoke orignal function
+    return {
+        OriginalFunc(Remote, ...)
+    }
+end)
+
 function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Unpack Data
     local Remote = Data.Remote
@@ -455,23 +474,23 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
 
     --// Get caller information
     if not IsReceive then
-        CallingFunction = self:FindCallingLClosure(0x6)
+        CallingFunction = self:FindCallingLClosure(6)
         SourceScript = CallingFunction and self:GetScriptFromFunc(CallingFunction) or nil
     end
 
     --// Add to queue
     Merge(Data, {
 		CallingScript = getcallingscript(),
+        CallingFunction = CallingFunction,
         SourceScript = SourceScript,
-		CallingFunction = CallingFunction,
         Id = Id,
 		ClassData = ClassData,
         Timestamp = Timestamp,
-        Args = Communication:SerializeTable({...})
+        Args = {...}
     })
 
     --// Invoke the Remote and log return values
-    local ReturnValues = self:Callback(Data, ...)
+    local ReturnValues = ProcessCallback(Data, ...)
     Data.ReturnValues = ReturnValues
 
     --// Queue log
@@ -485,23 +504,6 @@ function Process:SetAllRemoteData(Key: string, Value)
 	for RemoteID, Data in next, RemoteOptions do
 		Data[Key] = Value
 	end
-end
-
-function Process:GetRemoteData(Id: string)
-    local RemoteOptions = self.RemoteOptions
-
-    --// Check for existing remote data
-	local Existing = RemoteOptions[Id]
-	if Existing then return Existing end
-	
-    --// Base remote data
-	local Data = {
-		Excluded = false,
-		Blocked = false
-	}
-
-	RemoteOptions[Id] = Data
-	return Data
 end
 
 --// The communication creates a different table address

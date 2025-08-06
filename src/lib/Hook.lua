@@ -1,13 +1,15 @@
 local Hook = {
 	OriginalNamecall = nil,
 	OriginalIndex = nil,
+	PreviousFunctions = {}
 }
 
 type table = {
 	[any]: any
 }
 
-type MetaCallback = (Instance, ...any) -> ...any
+type MetaFunc = (Instance, ...any) -> ...any
+type UnkFunc = (...any) -> ...any
 
 --// Modules
 local Modules
@@ -28,7 +30,7 @@ function Hook:Init(Data)
 end
 
 --// The callback is expected to return a nil value sometimes which should be ingored
-local HookMiddle = newcclosure(function(OriginalFunc, Callback, ...)
+local HookMiddle = newcclosure(function(OriginalFunc, Callback, AlwaysTable: boolean?, ...)
 	--// Invoke callback and check for a reponce otherwise ignored
 	local ReturnValues = Callback(...)
 	if ReturnValues then
@@ -36,50 +38,81 @@ local HookMiddle = newcclosure(function(OriginalFunc, Callback, ...)
 	end
 
 	--// Invoke orignal function
+	if AlwaysTable then
+		return {OriginalFunc(...)}
+	end
 	return OriginalFunc(...)
 end)
 
+local function Merge(Base: table, New: table)
+	for Key, Value in next, New do
+		Base[Key] = Value
+	end
+end
+
+function Hook:Index(Object: Instance, Key: string)
+	return Object[Key]
+end
+
+function Hook:PushConfig(Overwrites)
+    Merge(self, Overwrites)
+end
+
 --// getrawmetatable
-function Hook:ReplaceMetaMethod(Object: Instance, Call: string, Callback: MetaCallback): MetaCallback
+function Hook:ReplaceMetaMethod(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
 	local Metatable = getrawmetatable(Object)
-	local OriginalFunc = rawget(Metatable, Call)
+	local OriginalFunc = clonefunction(Metatable[Call])
 	
 	--// Replace function
 	setreadonly(Metatable, false)
-	rawset(Metatable, Call, newcclosure(function(...)
-		return HookMiddle(OriginalFunc, Callback, ...)
-	end))
+	Metatable[Call] = newcclosure(function(...)
+		return HookMiddle(OriginalFunc, Callback, false, ...)
+	end)
 	setreadonly(Metatable, true)
 
 	return OriginalFunc
 end
 
 --// hookfunction
-function Hook:HookFunction(Func: (...any) -> ...any, Callback: (...any) -> ...any)
+function Hook:HookFunction(Func: UnkFunc, Callback: UnkFunc)
 	local OriginalFunc
-	OriginalFunc = hookfunction(Func, function(...)
-		return HookMiddle(OriginalFunc, Callback, ...)
-	end)
-	return OriginalFunc
-end
-
---// hookmetamethod
-function Hook:HookMetaCall(Object: Instance, Call: string, Callback: MetaCallback): MetaCallback
-	local OriginalFunc
-	OriginalFunc = hookmetamethod(Object, Call, newcclosure(function(...)
-		return HookMiddle(OriginalFunc, Callback, ...)
+	local WrappedCallback = newcclosure(Callback)
+	OriginalFunc = clonefunction(hookfunction(Func, function(...)
+		return HookMiddle(OriginalFunc, WrappedCallback, false, ...)
 	end))
 	return OriginalFunc
 end
 
-function Hook:HookMetaMethod(Object: Instance, Call: string, Callback: MetaCallback): MetaCallback
+--// hookmetamethod
+function Hook:HookMetaCall(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
+	local Metatable = getrawmetatable(Object)
+	local Unhooked
+	
+	Unhooked = self:HookFunction(Metatable[Call], function(...)
+		return HookMiddle(Unhooked, Callback, true, ...)
+	end)
+	return Unhooked
+end
+
+--// hookmetamethod
+-- function Hook:HookMetaCall(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
+-- 	local OriginalFunc
+-- 	OriginalFunc = hookmetamethod(Object, Call, newcclosure(function(...)
+-- 		return HookMiddle(OriginalFunc, Callback, false, ...)
+-- 	end))
+-- 	return OriginalFunc
+-- end
+
+function Hook:HookMetaMethod(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
+	local Func = newcclosure(Callback)
+	
 	--// Getrawmetatable
 	if Config.ReplaceMetaCallFunc then
-		return self:ReplaceMetaMethod(Object, Call, Callback)
+		return self:ReplaceMetaMethod(Object, Call, Func)
 	end
 	
 	--// Hookmetamethod
-	return self:HookMetaCall(Object, Call, Callback)
+	return self:HookMetaCall(Object, Call, Func)
 end
 
 --// This includes a few patches for executor functions that result in detection
@@ -110,13 +143,13 @@ function Hook:PatchFunctions()
 				local Caller, Line = Tracetable[1], Tracetable[2]
 				local Count = Process:CountMatches(Error, Caller)
 
-				if Count == 196 then
+				if Count == 195 then
 					Communication:ConsolePrint("C stack overflow patched")
 					Responce[2] = `{Caller}:{Line}: {Error}`
 				end
 			end
 
-			return Process:Unpack(Responce)
+			return Responce
 		end,
 		[getfenv] = function(OldFunc, Level: number, ...)
 			Level = Level or 1
@@ -135,23 +168,24 @@ function Hook:PatchFunctions()
 				return OldFunc(999999, ...)
 			end
 
-			return Process:Unpack(Responce)
+			return Responce
 		end
 	}
 
 	--// Hook each function
 	for Func, CallBack in Patches do
-		local OldFunc = clonefunction(Func)
-		hookfunction(Func, newcclosure(function(...)
-			return CallBack(OldFunc, ...)
-		end))
+		local Wrapped = newcclosure(CallBack)
+		local OldFunc; OldFunc = self:HookFunction(Func, function(...)
+			return Wrapped(OldFunc, ...)
+		end)
+
+		--// Cache previous function
+		self.PreviousFunctions[Func] = self
 	end
 end
 
-local function Merge(Base: table, New: table)
-	for Key, Value in next, New do
-		Base[Key] = Value
-	end
+function Hook:GetOriginalFunc(Func)
+	return self.PreviousFunctions[Func] or Func
 end
 
 function Hook:RunOnActors(Code: string, ChannelId: number)
@@ -217,14 +251,6 @@ function Hook:BeginHooks()
 		OriginalNamecall = OriginalNameCall,
 		--OriginalIndex = Oi
 	})
-end
-
-function Hook:Index(Object: Instance, Key: string)
-	return Object[Key]
-end
-
-function Hook:PushConfig(Overwrites)
-    Merge(self, Overwrites)
 end
 
 function Hook:HookClientInvoke(Remote, Method, Callback)

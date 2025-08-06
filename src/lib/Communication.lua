@@ -145,7 +145,16 @@ function Module:CheckValue(Value, Inbound: boolean?)
     return self:SerializeTable(Value)
 end
 
+local Tick = 0
+function Module:WaitCheck()
+    Tick += 1
+    if Tick > 20 then
+        Tick = 0
+        wait()
+    end
+end
 function Module:MakePacket(Index, Value): table
+    self:WaitCheck()
     return {
         Index = self:CheckValue(Index), 
         Value = self:CheckValue(Value)
@@ -155,6 +164,7 @@ end
 function Module:ReadPacket(Packet: table): (any, any)
     local Key = self:CheckValue(Packet.Index, true)
     local Value = self:CheckValue(Packet.Value, true)
+    self:WaitCheck()
     return Key, Value
 end
 
@@ -187,7 +197,12 @@ function Module:ConsolePrint(...)
 end
 
 function Module:QueueLog(Data)
-    self:Communicate("QueueLog", Data)
+    spawn(function()
+        local SerializedArgs = self:SerializeTable(Data.Args)
+        Data.Args = SerializedArgs
+
+        self:Communicate("QueueLog", Data)
+    end)
 end
 
 function Module:AddCommCallback(Type: string, Callback: (...any) -> ...any)
@@ -233,12 +248,6 @@ function Module:AddTypeCallbacks(Types: table)
     end
 end
 
-function Module:AddDefaultCallbacks(Event: BindableEvent)
-    self:AddCommCallback("Warn", function(...)
-        warn(...)
-    end)
-end
-
 function Module:CreateChannel(): number
     local ChannelID, Event = self:CreateCommChannel()
 
@@ -249,9 +258,6 @@ function Module:CreateChannel(): number
             Callback(...)
         end
     end)
-
-    --// Add default communication callbacks
-    self:AddDefaultCallbacks(Event)
 
     return ChannelID, Event
 end
