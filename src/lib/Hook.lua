@@ -376,6 +376,10 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 	self:Init(InitData)
 	self:PatchFunctions()
 	self:BeginHooks()
+
+	if ExtraData and ExtraData.IsActor then
+		Communication:ConsolePrint("Actor connected!")
+	end
 end
 
 function Hook:LoadMetaHooks(ActorCode: string, ChannelId: number)

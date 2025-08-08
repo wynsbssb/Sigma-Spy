@@ -1,5 +1,10 @@
 local Ui = {
-	DefaultEditorContent = "-- Jesus loves you",
+	DefaultEditorContent = [=[--[[
+	Sigma Spy, written by depso
+	Hooks rewritten and many more fixes!
+
+	Discord: https://discord.gg/bkUkm2vSbv
+]]]=],
 	LogLimit = 100,
     SeasonLabels = { 
         January = "⛄ %s ⛄", 
@@ -21,7 +26,6 @@ local Ui = {
 	},
     BaseConfig = {
         Theme = "SigmaSpy",
-		Title = "Sigma Spy BETA | Created by depso",
         NoScroll = true,
     },
 	OptionTypes = {
@@ -200,8 +204,6 @@ end
 function Ui:CreateWindow()
     local BaseConfig = self.BaseConfig
 	local Config = Process:DeepCloneTable(BaseConfig)
-	local Seasonal = self:TurnSeasonal(Config.Title)
-	Config.Title = Seasonal
 
 	--// Create Window
 	local Window = ReGui:Window(Config)
@@ -221,7 +223,7 @@ function Ui:CreateMainWindow()
 
 	--// Check if the font was successfully downloaded
 	self:FontWasSuccessful()
-	--self:AuraCounterService()
+	self:AuraCounterService()
 
 	--// UiVisible flag callback
 	Flags:SetFlagCallback("UiVisible", function(self, Visible)
@@ -362,7 +364,7 @@ function Ui:DisplayAura()
     local AURADELAY = Rand:NextInteger(1, 5)
 
 	--// Title
-	local Title = `Sigma Spy - Depso | AURA: {AURA}`
+	local Title = `Sigma Spy | AURA: {AURA}`
 	local Seasonal = self:TurnSeasonal(Title)
     Window:SetTitle(Seasonal)
 

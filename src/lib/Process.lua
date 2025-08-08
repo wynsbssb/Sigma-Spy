@@ -148,13 +148,26 @@ function Process:CountMatches(String: string, Match: string): number
 	return Count
 end
 
+function Process:CheckValue(Value, Ignore: table?)
+    local Type = typeof(Value)
+    
+    if Type == "table" then
+        Value = self:DeepCloneTable(Value, Ignore)
+    elseif Type == "Instance" then
+        Value = cloneref(Value)
+    end
+    
+    return Value
+end
+
 function Process:DeepCloneTable(Table, Ignore: table?)
 	local New = {}
 	for Key, Value in next, Table do
         --// Check if the value is ignored
         if Ignore and table.find(Ignore, Value) then continue end
-
-		New[Key] = typeof(Value) == "table" and self:DeepCloneTable(Value) or Value
+        
+        Key = self:CheckValue(Key, Ignore)
+		New[Key] = self:CheckValue(Value, Ignore)
 	end
 	return New
 end
@@ -486,12 +499,14 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
         Id = Id,
 		ClassData = ClassData,
         Timestamp = Timestamp,
-        Args = {...}
+        Args = self:DeepCloneTable({...})
     })
 
     --// Invoke the Remote and log return values
     local ReturnValues = ProcessCallback(Data, ...)
-    Data.ReturnValues = ReturnValues
+    if ReturnValues then
+        Data.ReturnValues = self:DeepCloneTable(ReturnValues)
+    end
 
     --// Queue log
     Communication:QueueLog(Data)
