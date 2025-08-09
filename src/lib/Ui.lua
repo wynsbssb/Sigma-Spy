@@ -201,9 +201,10 @@ function Ui:CreateButtons(Parent, Data: CreateButtons)
 	end
 end
 
-function Ui:CreateWindow()
+function Ui:CreateWindow(WindowConfig)
     local BaseConfig = self.BaseConfig
 	local Config = Process:DeepCloneTable(BaseConfig)
+	Process:Merge(Config, WindowConfig)
 
 	--// Create Window
 	local Window = ReGui:Window(Config)
@@ -215,6 +216,43 @@ function Ui:CreateWindow()
 	
 	--// Create Window
 	return Window
+end
+
+type AskConfig = {
+	Title: string,
+	Content: table,
+	Options: table
+}
+function Ui:AskUser(Config: AskConfig): string
+	local Window = self.Window
+	local Answered = false
+
+	--// Create modal
+	local ModalWindow = Window:PopupModal({
+		Title = Config.Title
+	})
+	ModalWindow:Label({
+		Text = table.concat(Config.Content, "\n"),
+		TextWrapped = true
+	})
+	ModalWindow:Separator()
+
+	--// Answers
+	local Row = ModalWindow:Row({
+		Expanded = true
+	})
+	for _, Answer in next, Config.Options do
+		Row:Button({
+			Text = Answer,
+			Callback = function()
+				Answered = Answer
+				ModalWindow:ClosePopup()
+			end,
+		})
+	end
+
+	repeat wait() until Answered
+	return Answered
 end
 
 function Ui:CreateMainWindow()
@@ -987,7 +1025,6 @@ function Ui:SetFocusedRemote(Data)
 
 		--// Problem check
 		if not ScriptCheck(ToDecompile, true) then return end
-
 		local Task = Ui:FilterName(`Viewing: {ToDecompile}.lua`, 200)
 		
 		--// Automatically Pop-out the editor for decompiling if enabled
@@ -1247,6 +1284,14 @@ end
 
 function Ui:QueueLog(Data)
 	local LogQueue = self.LogQueue
+	Process:Merge(Data, {
+		Args = Process:DeepCloneTable(Data.Args),
+	})
+
+	if Data.ReturnValues then
+        Data.ReturnValues = Process:DeepCloneTable(Data.ReturnValues)
+    end
+	
     table.insert(LogQueue, Data)
 end
 

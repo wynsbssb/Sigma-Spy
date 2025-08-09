@@ -85,11 +85,12 @@ local Config
 
 --// Communication channel
 local Channel
-local ChannelWrapped = false
+local WrappedChannel = false
 
 local SigmaENV = getfenv(1)
 
-local function Merge(Base: table, New: table)
+function Process:Merge(Base: table, New: table)
+    if not New then return end
 	for Key, Value in next, New do
 		Base[Key] = Value
 	end
@@ -109,7 +110,7 @@ end
 --// Communication
 function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
     Channel = NewChannel
-    ChannelWrapped = IsWrapped
+    WrappedChannel = IsWrapped
 end
 
 function Process:GetConfigOverwrites(Name: string)
@@ -129,7 +130,7 @@ function Process:CheckConfig(Config: table)
     local Overwrites = self:GetConfigOverwrites(Name)
     if not Overwrites then return end
 
-    Merge(Config, Overwrites)
+    self:Merge(Config, Overwrites)
 end
 
 function Process:CleanCError(Error: string): string
@@ -148,11 +149,12 @@ function Process:CountMatches(String: string, Match: string): number
 	return Count
 end
 
-function Process:CheckValue(Value, Ignore: table?)
+function Process:CheckValue(Value, Ignore: table?, Cache: table?)
     local Type = typeof(Value)
+    Communication:WaitCheck()
     
     if Type == "table" then
-        Value = self:DeepCloneTable(Value, Ignore)
+        Value = self:DeepCloneTable(Value, Ignore, Cache)
     elseif Type == "Instance" then
         Value = cloneref(Value)
     end
@@ -160,16 +162,32 @@ function Process:CheckValue(Value, Ignore: table?)
     return Value
 end
 
-function Process:DeepCloneTable(Table, Ignore: table?)
-	local New = {}
-	for Key, Value in next, Table do
+function Process:DeepCloneTable(Table, Ignore: table?, Visited: table?): table
+    if typeof(Table) ~= "table" then return Table end
+    local Cache = Visited or {}
+
+    --// Check for cached
+    if Cache[Table] then
+        return Cache[Table]
+    end
+
+    local New = {}
+    Cache[Table] = New
+
+    for Key, Value in next, Table do
         --// Check if the value is ignored
         if Ignore and table.find(Ignore, Value) then continue end
         
-        Key = self:CheckValue(Key, Ignore)
-		New[Key] = self:CheckValue(Value, Ignore)
-	end
-	return New
+        Key = self:CheckValue(Key, Ignore, Cache)
+        New[Key] = self:CheckValue(Value, Ignore, Cache)
+    end
+
+    --// Master clear
+    if not Visited then
+        table.clear(Cache)
+    end
+    
+    return New
 end
 
 function Process:Unpack(Table: table)
@@ -178,11 +196,11 @@ function Process:Unpack(Table: table)
 end
 
 function Process:PushConfig(Overwrites)
-    Merge(self, Overwrites)
+    self:Merge(self, Overwrites)
 end
 
 function Process:FuncExists(Name: string)
-	return getfenv(1)[Name]
+	return SigmaENV[Name]
 end
 
 function Process:CheckExecutor(): boolean
@@ -250,7 +268,7 @@ end
 
 function Process:IsProtectedRemote(Remote: Instance): boolean
     local IsDebug = Remote == Communication.DebugIdRemote
-    local IsChannel = Remote == (ChannelWrapped and Channel.Channel or Channel)
+    local IsChannel = Remote == (WrappedChannel and Channel.Channel or Channel)
 
     return IsDebug or IsChannel
 end
@@ -436,16 +454,14 @@ function Process:GetRemoteData(Id: string)
 	return Data
 end
 
-local ProcessCallback = newcclosure(function(Data: RemoteData, ...): table?
+local ProcessCallback = newcclosure(function(Data: RemoteData, Remote, ...): table?
     --// Unpack Data
     local OriginalFunc = Data.OriginalFunc
     local Id = Data.Id
     local Method = Data.Method
-    local Remote = Data.Remote
-
-    local RemoteData = Process:GetRemoteData(Id)
 
     --// Check if the Remote is Blocked
+    local RemoteData = Process:GetRemoteData(Id)
     if RemoteData.Blocked then return {} end
 
     --// Check for a spoof
@@ -461,9 +477,8 @@ local ProcessCallback = newcclosure(function(Data: RemoteData, ...): table?
     }
 end)
 
-function Process:ProcessRemote(Data: RemoteData, ...): table?
+function Process:ProcessRemote(Data: RemoteData, Remote, ...): table?
     --// Unpack Data
-    local Remote = Data.Remote
 	local Method = Data.Method
     local TransferType = Data.TransferType
     local IsReceive = Data.IsReceive
@@ -482,7 +497,7 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Add extra data into the log if needed
     local ExtraData = self.ExtraData
     if ExtraData then
-        Merge(Data, ExtraData)
+        self:Merge(Data, ExtraData)
     end
 
     --// Get caller information
@@ -492,21 +507,20 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     end
 
     --// Add to queue
-    Merge(Data, {
+    self:Merge(Data, {
+        Remote = cloneref(Remote),
 		CallingScript = getcallingscript(),
         CallingFunction = CallingFunction,
         SourceScript = SourceScript,
         Id = Id,
 		ClassData = ClassData,
         Timestamp = Timestamp,
-        Args = self:DeepCloneTable({...})
+        Args = {...}
     })
 
     --// Invoke the Remote and log return values
-    local ReturnValues = ProcessCallback(Data, ...)
-    if ReturnValues then
-        Data.ReturnValues = self:DeepCloneTable(ReturnValues)
-    end
+    local ReturnValues = ProcessCallback(Data, Remote, ...)
+    Data.ReturnValues = ReturnValues
 
     --// Queue log
     Communication:QueueLog(Data)

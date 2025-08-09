@@ -10,6 +10,10 @@ local Module = {
 local CommWrapper = {}
 CommWrapper.__index = CommWrapper
 
+--// Serializer cache
+local SerializeCache = setmetatable({}, {__mode = "k"})
+local DeserializeCache = setmetatable({}, {__mode = "k"})
+
 --// Services
 local CoreGui
 
@@ -148,11 +152,12 @@ end
 local Tick = 0
 function Module:WaitCheck()
     Tick += 1
-    if Tick > 20 then
-        Tick = 0
+    if Tick > 40 then
+        Tick = 0 -- I could use modulus here but the interger will be massive
         wait()
     end
 end
+
 function Module:MakePacket(Index, Value): table
     self:WaitCheck()
     return {
@@ -162,29 +167,46 @@ function Module:MakePacket(Index, Value): table
 end
 
 function Module:ReadPacket(Packet: table): (any, any)
+    if typeof(Packet) ~= "table" then return Packet end
+    
     local Key = self:CheckValue(Packet.Index, true)
     local Value = self:CheckValue(Packet.Value, true)
     self:WaitCheck()
+
     return Key, Value
 end
 
 function Module:SerializeTable(Table: table): table
+    --// Check cache for existing
+    local Cached = SerializeCache[Table]
+    if Cached then return Cached end
+
     local Serialized = {}
+    SerializeCache[Table] = Serialized
+
     for Index, Value in next, Table do
         local Packet = self:MakePacket(Index, Value)
         table.insert(Serialized, Packet)
     end
+
     return Serialized
 end
 
 function Module:DeserializeTable(Serialized: table): table
+    --// Check for cached
+    local Cached = DeserializeCache[Serialized]
+    if Cached then return Cached end
+
     local Table = {}
+    DeserializeCache[Serialized] = Table
+    
     for _, Packet in next, Serialized do
         local Index, Value = self:ReadPacket(Packet)
-        if not Index then continue end
+        if Index == nil then continue end
 
         Table[Index] = Value
     end
+
     return Table
 end
 

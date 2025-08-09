@@ -8,7 +8,10 @@
 local Hook = {
 	OriginalNamecall = nil,
 	OriginalIndex = nil,
-	PreviousFunctions = {}
+	PreviousFunctions = {},
+	DefaultConfig = {
+		FunctionPatches = true
+	}
 }
 
 type table = {
@@ -140,7 +143,6 @@ function Hook:PatchFunctions()
 			--// Patch c-closure error detection
 			if Success == false and IsC then
 				local NewError = Process:CleanCError(Error)
-				
 				Responce[2] = NewError
 			end
 
@@ -151,7 +153,7 @@ function Hook:PatchFunctions()
 				local Count = Process:CountMatches(Error, Caller)
 
 				if Count == 196 then
-					Communication:ConsolePrint("C stack overflow patched")
+					Communication:ConsolePrint(`C stack overflow patched, count was {Count}`)
 					Responce[2] = Error:gsub(`{Caller}:{Line}: `, Caller, 1)
 				end
 			end
@@ -208,13 +210,12 @@ end
 
 local function ProcessRemote(OriginalFunc, MetaMethod: string, self, Method: string, ...)
 	return Process:ProcessRemote({
-		Remote = self,
 		Method = Method,
 		OriginalFunc = OriginalFunc,
 		MetaMethod = MetaMethod,
 		TransferType = "Send",
 		IsExploit = checkcaller()
-	}, ...)
+	}, self, ...)
 end
 
 function Hook:HookRemoteTypeIndex(ClassName: string, FuncName: string)
@@ -302,13 +303,12 @@ function Hook:ConnectClientRecive(Remote)
 	--// New callback function
 	local function Callback(...)
         return Process:ProcessRemote({
-            Remote = Remote,
             Method = Method,
             OriginalFunc = PreviousFunction,
             IsReceive = true,
             MetaMethod = "Connect",
 			IsExploit = checkcaller()
-        }, ...)
+        }, Remote, ...)
 	end
 
 	--// Connect remote
@@ -365,6 +365,13 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 		["UpdateSpoofs"] = function(Content: string)
 			local Spoofs = loadstring(Content)()
 			ProcessLib:SetNewReturnSpoofs(Spoofs)
+		end,
+		["BeginHooks"] = function(Config)
+			if Config.PatchFunctions then
+				self:PatchFunctions()
+			end
+			self:BeginHooks()
+			Communication:ConsolePrint("Hooks loaded")
 		end
 	})
 	
@@ -374,8 +381,6 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 
 	--// Hook configuration
 	self:Init(InitData)
-	self:PatchFunctions()
-	self:BeginHooks()
 
 	if ExtraData and ExtraData.IsActor then
 		Communication:ConsolePrint("Actor connected!")
