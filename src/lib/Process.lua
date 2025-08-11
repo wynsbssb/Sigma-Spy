@@ -83,6 +83,9 @@ local ReturnSpoofs
 local Ui
 local Config
 
+--// Services
+local HttpService: HttpService
+
 --// Communication channel
 local Channel
 local WrappedChannel = false
@@ -98,6 +101,10 @@ end
 
 function Process:Init(Data)
     local Modules = Data.Modules
+    local Services = Data.Services
+
+    --// Services
+    HttpService = Services.HttpService
 
     --// Modules
     Config = Modules.Config
@@ -191,6 +198,7 @@ function Process:DeepCloneTable(Table, Ignore: table?, Visited: table?): table
 end
 
 function Process:Unpack(Table: table)
+    if not Table then return Table end
 	local Length = table.maxn(Table)
 	return unpack(Table, 1, Length)
 end
@@ -452,6 +460,28 @@ function Process:GetRemoteData(Id: string)
 
 	RemoteOptions[Id] = Data
 	return Data
+end
+
+function Process:CallDiscordRPC(Body: table)
+    request({
+        Url = "http://127.0.0.1:6463/rpc?v=1",
+        Method = "POST",
+        Headers = {
+            ["Content-Type"] = "application/json",
+            ["Origin"] = "https://discord.com/"
+        },
+        Body = HttpService:JSONEncode(Body)
+    })
+end
+
+function Process:PromptDiscordInvite(InviteCode: string)
+    self:CallDiscordRPC({
+        cmd = "INVITE_BROWSER",
+        nonce = HttpService:GenerateGUID(false),
+        args = {
+            code = InviteCode
+        }
+    })
 end
 
 local ProcessCallback = newcclosure(function(Data: RemoteData, Remote, ...): table?

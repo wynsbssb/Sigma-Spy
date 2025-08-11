@@ -471,8 +471,7 @@ function Ui:ConsoleTab(InfoSelector)
 	ButtonsRow:Button({
 		Text = "Copy",
 		Callback = function()
-			local Content = Console:GetValue()
-			toclipboard(Content)
+			toclipboard(Console:GetValue())
 		end
 	})
 	ButtonsRow:Button({
@@ -551,8 +550,9 @@ function Ui:MakeOptionsTab(InfoSelector)
 				end,
 			},
 			{
-				Text = "Copy Discord",
+				Text = "Join Discord",
 				Callback = function()
+					Process:PromptDiscordInvite("s9ngmUDWgb")
 					self:SetClipboard("https://discord.gg/s9ngmUDWgb")
 				end,
 			},
@@ -956,11 +956,18 @@ function Ui:SetFocusedRemote(Data)
 	end
 	function Data:BuildScript(Button: GuiButton)
 		Ui:MakeButtonMenu(Button, {self}, {
+			["Save"] = DataConnection("SaveScript"),
 			["Call Remote"] = DataConnection("MakeScript", "Remote"),
 			["Block Remote"] = DataConnection("MakeScript", "Block"),
 			["Repeat For"] = DataConnection("MakeScript", "Repeat"),
 			["Spam Remote"] = DataConnection("MakeScript", "Spam")
 		})
+	end
+	function Data:SaveScript()
+		local FilePath = Generation:TimeStampFile(self.Task)
+		writefile(FilePath, CodeEditor:GetText())
+
+		Ui:ShowModal({"Saved script to", FilePath})
 	end
 	function Data:SaveBytecode()
 		--// Problem check

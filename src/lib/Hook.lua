@@ -44,13 +44,21 @@ local HookMiddle = newcclosure(function(OriginalFunc, Callback, AlwaysTable: boo
 	--// Invoke callback and check for a reponce otherwise ignored
 	local ReturnValues = Callback(...)
 	if ReturnValues then
-		return Process:Unpack(ReturnValues)
+		--// Unpack
+		if not AlwaysTable then
+			return Process:Unpack(ReturnValues)
+		end
+
+		--// Return packed responce
+		return ReturnValues
 	end
 
-	--// Invoke orignal function
+	--// Return packed responce
 	if AlwaysTable then
 		return {OriginalFunc(...)}
 	end
+
+	--// Unpacked
 	return OriginalFunc(...)
 end)
 
@@ -103,15 +111,6 @@ function Hook:HookMetaCall(Object: Instance, Call: string, Callback: MetaFunc): 
 	end)
 	return Unhooked
 end
-
---// hookmetamethod
--- function Hook:HookMetaCall(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
--- 	local OriginalFunc
--- 	OriginalFunc = hookmetamethod(Object, Call, newcclosure(function(...)
--- 		return HookMiddle(OriginalFunc, Callback, false, ...)
--- 	end))
--- 	return OriginalFunc
--- end
 
 function Hook:HookMetaMethod(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
 	local Func = newcclosure(Callback)
@@ -268,15 +267,18 @@ function Hook:HookClientInvoke(Remote, Method, Callback)
 
 	--// Some executors like Potassium will throw a error if the Callback value is nil
 	if not Success then return end
+	if not Function then return end
 	
+	--// Test hookfunction
 	local HookSuccess = pcall(function()
-		self:HookFunction(Function, function(self, ...)
-			return Callback(...)
-		end)
+		self:HookFunction(Function, Callback)
 	end)
-	
 	if HookSuccess then return end
-	Remote[Method] = Callback
+
+	--// Replace callback function otherwise
+	Remote[Method] = function(...)
+		return HookMiddle(Function, Callback, false, ...)
+	end
 end
 
 function Hook:MultiConnect(Remotes)
@@ -295,7 +297,6 @@ function Hook:ConnectClientRecive(Remote)
     local IsRemoteFunction = ClassData.IsRemoteFunction
 	local NoReciveHook = ClassData.NoReciveHook
     local Method = ClassData.Receive[1]
-	local PreviousFunction = nil
 
 	--// Check if the Recive should be hooked
 	if NoReciveHook then return end
@@ -304,7 +305,6 @@ function Hook:ConnectClientRecive(Remote)
 	local function Callback(...)
         return Process:ProcessRemote({
             Method = Method,
-            OriginalFunc = PreviousFunction,
             IsReceive = true,
             MetaMethod = "Connect",
 			IsExploit = checkcaller()
