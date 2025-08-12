@@ -83,13 +83,17 @@ local ReturnSpoofs
 local Ui
 local Config
 
+--// Services
+local HttpService: HttpService
+
 --// Communication channel
 local Channel
-local ChannelWrapped = false
+local WrappedChannel = false
 
 local SigmaENV = getfenv(1)
 
-local function Merge(Base: table, New: table)
+function Process:Merge(Base: table, New: table)
+    if not New then return end
 	for Key, Value in next, New do
 		Base[Key] = Value
 	end
@@ -97,6 +101,10 @@ end
 
 function Process:Init(Data)
     local Modules = Data.Modules
+    local Services = Data.Services
+
+    --// Services
+    HttpService = Services.HttpService
 
     --// Modules
     Config = Modules.Config
@@ -109,7 +117,7 @@ end
 --// Communication
 function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
     Channel = NewChannel
-    ChannelWrapped = IsWrapped
+    WrappedChannel = IsWrapped
 end
 
 function Process:GetConfigOverwrites(Name: string)
@@ -129,7 +137,7 @@ function Process:CheckConfig(Config: table)
     local Overwrites = self:GetConfigOverwrites(Name)
     if not Overwrites then return end
 
-    Merge(Config, Overwrites)
+    self:Merge(Config, Overwrites)
 end
 
 function Process:CleanCError(Error: string): string
@@ -148,28 +156,59 @@ function Process:CountMatches(String: string, Match: string): number
 	return Count
 end
 
-function Process:DeepCloneTable(Table, Ignore: table?)
-	local New = {}
-	for Key, Value in next, Table do
+function Process:CheckValue(Value, Ignore: table?, Cache: table?)
+    local Type = typeof(Value)
+    Communication:WaitCheck()
+    
+    if Type == "table" then
+        Value = self:DeepCloneTable(Value, Ignore, Cache)
+    elseif Type == "Instance" then
+        Value = cloneref(Value)
+    end
+    
+    return Value
+end
+
+function Process:DeepCloneTable(Table, Ignore: table?, Visited: table?): table
+    if typeof(Table) ~= "table" then return Table end
+    local Cache = Visited or {}
+
+    --// Check for cached
+    if Cache[Table] then
+        return Cache[Table]
+    end
+
+    local New = {}
+    Cache[Table] = New
+
+    for Key, Value in next, Table do
         --// Check if the value is ignored
         if Ignore and table.find(Ignore, Value) then continue end
+        
+        Key = self:CheckValue(Key, Ignore, Cache)
+        New[Key] = self:CheckValue(Value, Ignore, Cache)
+    end
 
-		New[Key] = typeof(Value) == "table" and self:DeepCloneTable(Value) or Value
-	end
-	return New
+    --// Master clear
+    if not Visited then
+        table.clear(Cache)
+    end
+    
+    return New
 end
 
 function Process:Unpack(Table: table)
+    if not Table then return Table end
 	local Length = table.maxn(Table)
 	return unpack(Table, 1, Length)
 end
 
 function Process:PushConfig(Overwrites)
-    Merge(self, Overwrites)
+    self:Merge(self, Overwrites)
 end
 
 function Process:FuncExists(Name: string)
-	return getfenv(1)[Name]
+	return SigmaENV[Name]
 end
 
 function Process:CheckExecutor(): boolean
@@ -237,7 +276,7 @@ end
 
 function Process:IsProtectedRemote(Remote: Instance): boolean
     local IsDebug = Remote == Communication.DebugIdRemote
-    local IsChannel = Remote == (ChannelWrapped and Channel.Channel or Channel)
+    local IsChannel = Remote == (WrappedChannel and Channel.Channel or Channel)
 
     return IsDebug or IsChannel
 end
@@ -290,6 +329,7 @@ function Process:SetNewReturnSpoofs(NewReturnSpoofs: table)
 end
 
 function Process:FindCallingLClosure(Offset: number)
+    local Getfenv = Hook:GetOriginalFunc(getfenv)
     Offset += 1
 
     while true do
@@ -302,34 +342,10 @@ function Process:FindCallingLClosure(Offset: number)
         --// Check if the function is valid
         local Function = debug.info(Offset, "f")
         if not Function then return end
+        if Getfenv(Function) == SigmaENV then continue end
 
         return Function
     end
-end
-
-function Process:Callback(Data: RemoteData, ...): table?
-    --// Unpack Data
-    local OriginalFunc = Data.OriginalFunc
-    local Id = Data.Id
-    local Method = Data.Method
-    local Remote = Data.Remote
-
-    local RemoteData = self:GetRemoteData(Id)
-
-    --// Check if the Remote is Blocked
-    if RemoteData.Blocked then return {} end
-
-    --// Check for a spoof
-    local Spoof = self:GetRemoteSpoof(Remote, Method, OriginalFunc, ...)
-    if Spoof then return Spoof end
-
-    --// Check if the orignal function was passed
-    if not OriginalFunc then return end
-
-    --// Invoke orignal function
-    return {
-        OriginalFunc(Remote, ...)
-    }
 end
 
 function Process:Decompile(Script: LocalScript | ModuleScript): string
@@ -429,9 +445,70 @@ function Process:IsSigmaSpyENV(Env: table): boolean
     return Env == SigmaENV
 end
 
-function Process:ProcessRemote(Data: RemoteData, ...): table?
+function Process:GetRemoteData(Id: string)
+    local RemoteOptions = self.RemoteOptions
+
+    --// Check for existing remote data
+	local Existing = RemoteOptions[Id]
+	if Existing then return Existing end
+	
+    --// Base remote data
+	local Data = {
+		Excluded = false,
+		Blocked = false
+	}
+
+	RemoteOptions[Id] = Data
+	return Data
+end
+
+function Process:CallDiscordRPC(Body: table)
+    request({
+        Url = "http://127.0.0.1:6463/rpc?v=1",
+        Method = "POST",
+        Headers = {
+            ["Content-Type"] = "application/json",
+            ["Origin"] = "https://discord.com/"
+        },
+        Body = HttpService:JSONEncode(Body)
+    })
+end
+
+function Process:PromptDiscordInvite(InviteCode: string)
+    self:CallDiscordRPC({
+        cmd = "INVITE_BROWSER",
+        nonce = HttpService:GenerateGUID(false),
+        args = {
+            code = InviteCode
+        }
+    })
+end
+
+local ProcessCallback = newcclosure(function(Data: RemoteData, Remote, ...): table?
     --// Unpack Data
-    local Remote = Data.Remote
+    local OriginalFunc = Data.OriginalFunc
+    local Id = Data.Id
+    local Method = Data.Method
+
+    --// Check if the Remote is Blocked
+    local RemoteData = Process:GetRemoteData(Id)
+    if RemoteData.Blocked then return {} end
+
+    --// Check for a spoof
+    local Spoof = Process:GetRemoteSpoof(Remote, Method, OriginalFunc, ...)
+    if Spoof then return Spoof end
+
+    --// Check if the orignal function was passed
+    if not OriginalFunc then return end
+
+    --// Invoke orignal function
+    return {
+        OriginalFunc(Remote, ...)
+    }
+end)
+
+function Process:ProcessRemote(Data: RemoteData, Remote, ...): table?
+    --// Unpack Data
 	local Method = Data.Method
     local TransferType = Data.TransferType
     local IsReceive = Data.IsReceive
@@ -450,28 +527,29 @@ function Process:ProcessRemote(Data: RemoteData, ...): table?
     --// Add extra data into the log if needed
     local ExtraData = self.ExtraData
     if ExtraData then
-        Merge(Data, ExtraData)
+        self:Merge(Data, ExtraData)
     end
 
     --// Get caller information
     if not IsReceive then
-        CallingFunction = self:FindCallingLClosure(0x6)
+        CallingFunction = self:FindCallingLClosure(6)
         SourceScript = CallingFunction and self:GetScriptFromFunc(CallingFunction) or nil
     end
 
     --// Add to queue
-    Merge(Data, {
+    self:Merge(Data, {
+        Remote = cloneref(Remote),
 		CallingScript = getcallingscript(),
+        CallingFunction = CallingFunction,
         SourceScript = SourceScript,
-		CallingFunction = CallingFunction,
         Id = Id,
 		ClassData = ClassData,
         Timestamp = Timestamp,
-        Args = Communication:SerializeTable({...})
+        Args = {...}
     })
 
     --// Invoke the Remote and log return values
-    local ReturnValues = self:Callback(Data, ...)
+    local ReturnValues = ProcessCallback(Data, Remote, ...)
     Data.ReturnValues = ReturnValues
 
     --// Queue log
@@ -485,23 +563,6 @@ function Process:SetAllRemoteData(Key: string, Value)
 	for RemoteID, Data in next, RemoteOptions do
 		Data[Key] = Value
 	end
-end
-
-function Process:GetRemoteData(Id: string)
-    local RemoteOptions = self.RemoteOptions
-
-    --// Check for existing remote data
-	local Existing = RemoteOptions[Id]
-	if Existing then return Existing end
-	
-    --// Base remote data
-	local Data = {
-		Excluded = false,
-		Blocked = false
-	}
-
-	RemoteOptions[Id] = Data
-	return Data
 end
 
 --// The communication creates a different table address

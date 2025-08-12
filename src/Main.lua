@@ -115,3 +115,20 @@ Ui:BeginLogService()
 --// Load hooks
 local ActorCode = Files:MakeActorScript(Scripts, ChannelId)
 Hook:LoadHooks(ActorCode, ChannelId)
+
+local EnablePatches = Ui:AskUser({
+	Title = "Enable function patches?",
+	Content = {
+		"On some executors, function patches can prevent common detections that executor has",
+		"By enabling this, it MAY trigger hook detections in some games, this is why you are asked.",
+		"If it doesn't work, rejoin and press 'No'",
+		"",
+		"(This does not affect game functionality)"
+	},
+	Options = {"Yes", "No"}
+}) == "Yes"
+
+--// Begin hooks
+Event:Fire("BeginHooks", {
+	PatchFunctions = EnablePatches
+})

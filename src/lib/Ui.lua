@@ -1,5 +1,10 @@
 local Ui = {
-	DefaultEditorContent = "-- Jesus loves you",
+	DefaultEditorContent = [=[--[[
+	Sigma Spy, written by depso
+	Hooks rewritten and many more fixes!
+
+	Discord: https://discord.gg/bkUkm2vSbv
+]]]=],
 	LogLimit = 100,
     SeasonLabels = { 
         January = "⛄ %s ⛄", 
@@ -21,7 +26,6 @@ local Ui = {
 	},
     BaseConfig = {
         Theme = "SigmaSpy",
-		Title = "Sigma Spy | Created by depso",
         NoScroll = true,
     },
 	OptionTypes = {
@@ -197,11 +201,10 @@ function Ui:CreateButtons(Parent, Data: CreateButtons)
 	end
 end
 
-function Ui:CreateWindow()
+function Ui:CreateWindow(WindowConfig)
     local BaseConfig = self.BaseConfig
 	local Config = Process:DeepCloneTable(BaseConfig)
-	local Seasonal = self:TurnSeasonal(Config.Title)
-	Config.Title = Seasonal
+	Process:Merge(Config, WindowConfig)
 
 	--// Create Window
 	local Window = ReGui:Window(Config)
@@ -215,13 +218,50 @@ function Ui:CreateWindow()
 	return Window
 end
 
+type AskConfig = {
+	Title: string,
+	Content: table,
+	Options: table
+}
+function Ui:AskUser(Config: AskConfig): string
+	local Window = self.Window
+	local Answered = false
+
+	--// Create modal
+	local ModalWindow = Window:PopupModal({
+		Title = Config.Title
+	})
+	ModalWindow:Label({
+		Text = table.concat(Config.Content, "\n"),
+		TextWrapped = true
+	})
+	ModalWindow:Separator()
+
+	--// Answers
+	local Row = ModalWindow:Row({
+		Expanded = true
+	})
+	for _, Answer in next, Config.Options do
+		Row:Button({
+			Text = Answer,
+			Callback = function()
+				Answered = Answer
+				ModalWindow:ClosePopup()
+			end,
+		})
+	end
+
+	repeat wait() until Answered
+	return Answered
+end
+
 function Ui:CreateMainWindow()
 	local Window = self:CreateWindow()
 	self.Window = Window
 
 	--// Check if the font was successfully downloaded
 	self:FontWasSuccessful()
-	--self:AuraCounterService()
+	self:AuraCounterService()
 
 	--// UiVisible flag callback
 	Flags:SetFlagCallback("UiVisible", function(self, Visible)
@@ -362,7 +402,7 @@ function Ui:DisplayAura()
     local AURADELAY = Rand:NextInteger(1, 5)
 
 	--// Title
-	local Title = `Sigma Spy - Depso | AURA: {AURA}`
+	local Title = `Sigma Spy | AURA: {AURA}`
 	local Seasonal = self:TurnSeasonal(Title)
     Window:SetTitle(Seasonal)
 
@@ -419,35 +459,36 @@ function Ui:ConsoleTab(InfoSelector)
 		Name = "Console"
 	})
 
+	local Console
 	local ButtonsRow = Tab:Row()
+
 	ButtonsRow:Button({
 		Text = "Clear",
 		Callback = function()
-			self.Console:Clear()
+			Console:Clear()
 		end
 	})
 	ButtonsRow:Button({
 		Text = "Copy",
 		Callback = function()
-			local Content = self.Console:GetValue()
-			toclipboard(Content)
+			toclipboard(Console:GetValue())
 		end
 	})
 	ButtonsRow:Button({
 		Text = "Pause",
 		Callback = function(self)
-			local Enabled = not self.Console.Enabled
-			local Text = Enabled and "Paused" or "Pause"
+			local Enabled = not Console.Enabled
+			local Text = Enabled and "Pause" or "Paused"
 			self.Text = Text
 
 			--// Update console
-			self.Console.Enabled = Enabled
+			Console.Enabled = Enabled
 		end,
 	})
 	ButtonsRow:Expand()
 
 	--// Create console
-	self.Console = Tab:Console({
+	Console = Tab:Console({
 		Text = "-- Created by depso",
 		ReadOnly = true,
 		Border = false,
@@ -457,6 +498,8 @@ function Ui:ConsoleTab(InfoSelector)
 		RichText = true,
 		MaxLines = 50
 	})
+
+	self.Console = Console
 end
 
 function Ui:ConsoleLog(...: string?)
@@ -507,8 +550,9 @@ function Ui:MakeOptionsTab(InfoSelector)
 				end,
 			},
 			{
-				Text = "Copy Discord",
+				Text = "Join Discord",
 				Callback = function()
+					Process:PromptDiscordInvite("s9ngmUDWgb")
 					self:SetClipboard("https://discord.gg/s9ngmUDWgb")
 				end,
 			},
@@ -912,11 +956,18 @@ function Ui:SetFocusedRemote(Data)
 	end
 	function Data:BuildScript(Button: GuiButton)
 		Ui:MakeButtonMenu(Button, {self}, {
+			["Save"] = DataConnection("SaveScript"),
 			["Call Remote"] = DataConnection("MakeScript", "Remote"),
 			["Block Remote"] = DataConnection("MakeScript", "Block"),
 			["Repeat For"] = DataConnection("MakeScript", "Repeat"),
 			["Spam Remote"] = DataConnection("MakeScript", "Spam")
 		})
+	end
+	function Data:SaveScript()
+		local FilePath = Generation:TimeStampFile(self.Task)
+		writefile(FilePath, CodeEditor:GetText())
+
+		Ui:ShowModal({"Saved script to", FilePath})
 	end
 	function Data:SaveBytecode()
 		--// Problem check
@@ -981,7 +1032,6 @@ function Ui:SetFocusedRemote(Data)
 
 		--// Problem check
 		if not ScriptCheck(ToDecompile, true) then return end
-
 		local Task = Ui:FilterName(`Viewing: {ToDecompile}.lua`, 200)
 		
 		--// Automatically Pop-out the editor for decompiling if enabled
@@ -1241,6 +1291,14 @@ end
 
 function Ui:QueueLog(Data)
 	local LogQueue = self.LogQueue
+	Process:Merge(Data, {
+		Args = Process:DeepCloneTable(Data.Args),
+	})
+
+	if Data.ReturnValues then
+        Data.ReturnValues = Process:DeepCloneTable(Data.ReturnValues)
+    end
+	
     table.insert(LogQueue, Data)
 end
 

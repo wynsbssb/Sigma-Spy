@@ -3,7 +3,6 @@ return {
     ForceUseCustomComm = false,
     ReplaceMetaCallFunc = false,
     NoReceiveHooking = false,
-    NoFunctionPatching = false,
     BlackListedServices = {
         "RobloxReplicatedStorage"
     },
