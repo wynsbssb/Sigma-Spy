@@ -20,6 +20,7 @@
 	Build scripts are available in /build
 ]]
 
+
 local a,b={UseWorkspace=false,NoActors=false,FolderName='Sigma Spy',RepoUrl=
 [[https://raw.githubusercontent.com/depthso/Sigma-Spy/refs/heads/main]],
 ParserUrl=
@@ -54,8 +55,8 @@ self:TemplateCheck(i,h)local j=readfile(i)local k=loadstring(j)if k then return
 j end return self:GetTemplate(h)end return self:GetFile(i)end function e:
 LoadLibraries(g,...)local h={}for i,j in next,g do local k=typeof(j)=='table'and
 j[1]=='base64'j=k and j[2]or j if typeof(j)~='string'and not k then h[i]=j
-continue end if k then j=crypt.base64decode(j)g[i]=j end local l,m=loadstring(j,
-i)assert(l,`Failed to load {i}: {m}`)h[i]=l(...)end return h end function e:
+continue end if k then j=crypt.base64decode(j)g[i]=j end local l,m=loadstring(j)
+assert(l,`Failed to load {i}: {m}`)h[i]=l(...)end return h end function e:
 LoadModules(g,h)for i,j in next,g do local k=j.Init if not k then continue end j
 :Init(h)end end function e:CreateFont(g,h)if not h then return end local i=`assets/{
 g}.json`local j,k=self:MakePath(i),{name=g,faces={{name='Regular',weight=400,
