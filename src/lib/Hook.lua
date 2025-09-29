@@ -1,7 +1,7 @@
 --[[
 
-	Taking my methods 💖💖
-	I love a paster and a skid, puts disgust in my face
+	在偷我的方法 💖💖
+	我喜欢抄袭狗和小白，真让我恶心
 
 ]]
 
@@ -21,7 +21,7 @@ type table = {
 type MetaFunc = (Instance, ...any) -> ...any
 type UnkFunc = (...any) -> ...any
 
---// Modules
+--// 模块
 local Modules
 local Process
 local Configuration
@@ -39,26 +39,26 @@ function Hook:Init(Data)
 	Configuration = Modules.Configuration or Configuration
 end
 
---// The callback is expected to return a nil value sometimes which should be ingored
+--// 回调函数有时可能返回 nil 值，这种情况应当被忽略
 local HookMiddle = newcclosure(function(OriginalFunc, Callback, AlwaysTable: boolean?, ...)
-	--// Invoke callback and check for a reponce otherwise ignored
+	--// 调用回调并检查返回值，如果为 nil 则忽略
 	local ReturnValues = Callback(...)
 	if ReturnValues then
-		--// Unpack
+		--// 解包
 		if not AlwaysTable then
 			return Process:Unpack(ReturnValues)
 		end
 
-		--// Return packed responce
+		--// 返回打包后的结果
 		return ReturnValues
 	end
 
-	--// Return packed responce
+	--// 返回打包结果
 	if AlwaysTable then
 		return {OriginalFunc(...)}
 	end
 
-	--// Unpacked
+	--// 原始解包调用
 	return OriginalFunc(...)
 end)
 
@@ -81,7 +81,7 @@ function Hook:ReplaceMetaMethod(Object: Instance, Call: string, Callback: MetaFu
 	local Metatable = getrawmetatable(Object)
 	local OriginalFunc = clonefunction(Metatable[Call])
 	
-	--// Replace function
+	--// 替换函数
 	setreadonly(Metatable, false)
 	Metatable[Call] = newcclosure(function(...)
 		return HookMiddle(OriginalFunc, Callback, false, ...)
@@ -115,44 +115,44 @@ end
 function Hook:HookMetaMethod(Object: Instance, Call: string, Callback: MetaFunc): MetaFunc
 	local Func = newcclosure(Callback)
 	
-	--// Getrawmetatable
+	--// getrawmetatable 替换
 	if Config.ReplaceMetaCallFunc then
 		return self:ReplaceMetaMethod(Object, Call, Func)
 	end
 	
-	--// Hookmetamethod
+	--// hookmetamethod
 	return self:HookMetaCall(Object, Call, Func)
 end
 
---// This includes a few patches for executor functions that result in detection
---// This isn't bulletproof since some functions like hookfunction I can't patch
---// By the way, thanks for copying this guys! Super appreciate the copycat
+--// 包含一些对执行器函数的补丁，防止检测
+--// 这并非百分百安全，因为像 hookfunction 之类的函数我无法修补
+--// 顺便说一句，谢谢你们抄袭这些代码！超感动的复制粘贴怪们
 function Hook:PatchFunctions()
-	--// Check if this function is disabled in the configuration
+	--// 检查是否在配置里禁用此功能
 	if Config.NoFunctionPatching then return end
 
 	local Patches = {
-		--// Error detection patch
-		--// hookfunction may still be detected depending on the executor
+		--// 错误检测补丁
+		--// hookfunction 仍可能被检测，取决于执行器
 		[pcall] =  function(OldFunc, Func, ...)
 			local Responce = {OldFunc(Func, ...)}
 			local Success, Error = Responce[1], Responce[2]
 			local IsC = iscclosure(Func)
 
-			--// Patch c-closure error detection
+			--// 修复 c-closure 错误检测
 			if Success == false and IsC then
 				local NewError = Process:CleanCError(Error)
 				Responce[2] = NewError
 			end
 
-			--// Stack-overflow detection patch
+			--// 修复堆栈溢出检测
 			if Success == false and not IsC and Error:find("C stack overflow") then
 				local Tracetable = Error:split(":")
 				local Caller, Line = Tracetable[1], Tracetable[2]
 				local Count = Process:CountMatches(Error, Caller)
 
 				if Count == 196 then
-					Communication:ConsolePrint(`C stack overflow patched, count was {Count}`)
+					Communication:ConsolePrint(`堆栈溢出已修补，计数为 {Count}`)
 					Responce[2] = Error:gsub(`{Caller}:{Line}: `, Caller, 1)
 				end
 			end
@@ -162,7 +162,7 @@ function Hook:PatchFunctions()
 		[getfenv] = function(OldFunc, Level: number, ...)
 			Level = Level or 1
 
-			--// Prevent catpure of executor's env
+			--// 防止捕获执行器的环境
 			if type(Level) == "number" then
 				Level += 2
 			end
@@ -170,9 +170,9 @@ function Hook:PatchFunctions()
 			local Responce = {OldFunc(Level, ...)}
 			local ENV = Responce[1]
 
-			--// __tostring ENV detection patch
+			--// __tostring 环境检测补丁
 			if not checkcaller() and ENV == ExeENV then
-				Communication:ConsolePrint("ENV escape patched")
+				Communication:ConsolePrint("环境逃逸已修补")
 				return OldFunc(999999, ...)
 			end
 
@@ -180,14 +180,14 @@ function Hook:PatchFunctions()
 		end
 	}
 
-	--// Hook each function
+	--// hook 每个函数
 	for Func, CallBack in Patches do
 		local Wrapped = newcclosure(CallBack)
 		local OldFunc; OldFunc = self:HookFunction(Func, function(...)
 			return Wrapped(OldFunc, ...)
 		end)
 
-		--// Cache previous function
+		--// 缓存原始函数
 		self.PreviousFunctions[Func] = OldFunc
 	end
 end
@@ -222,15 +222,15 @@ function Hook:HookRemoteTypeIndex(ClassName: string, FuncName: string)
 	local Func = Remote[FuncName]
 	local OriginalFunc
 
-	--// Remotes will share the same functions
-	--// 	For example FireServer will be identical
-	--// Addionally, this is for __index calls.
-	--// 	A __namecall hook will not detect this
+	--// 不同 Remote 会共享相同的函数
+	--// 例如 FireServer 会完全相同
+	--// 此外，这用于 __index 调用
+	--// __namecall hook 无法检测到这一点
 	OriginalFunc = self:HookFunction(Func, function(self, ...)
-		--// Check if the Object is allowed 
+		--// 检查是否允许该对象
 		if not Process:RemoteAllowed(self, "Send", FuncName) then return end
 
-		--// Process the remote data
+		--// 处理远程数据
 		return ProcessRemote(OriginalFunc, "__index", self, FuncName, ...)
 	end)
 end
@@ -244,7 +244,7 @@ function Hook:HookRemoteIndexes()
 end
 
 function Hook:BeginHooks()
-	--// Hook Remote functions
+	--// Hook Remote 函数
 	self:HookRemoteIndexes()
 
 	--// Namecall hook
@@ -265,17 +265,17 @@ function Hook:HookClientInvoke(Remote, Method, Callback)
 		return getcallbackvalue(Remote, Method)
 	end)
 
-	--// Some executors like Potassium will throw a error if the Callback value is nil
+	--// 一些执行器（例如 Potassium）会在 Callback 为 nil 时抛出错误
 	if not Success then return end
 	if not Function then return end
 	
-	--// Test hookfunction
+	--// 尝试 hookfunction
 	local HookSuccess = pcall(function()
 		self:HookFunction(Function, Callback)
 	end)
 	if HookSuccess then return end
 
-	--// Replace callback function otherwise
+	--// 否则替换回调函数
 	Remote[Method] = function(...)
 		return HookMiddle(Function, Callback, false, ...)
 	end
@@ -288,20 +288,20 @@ function Hook:MultiConnect(Remotes)
 end
 
 function Hook:ConnectClientRecive(Remote)
-	--// Check if the Remote class is allowed for receiving
+	--// 检查是否允许接收该 Remote 类
 	local Allowed = Process:RemoteAllowed(Remote, "Receive")
 	if not Allowed then return end
 
-	--// Check if the Object has Remote class data
+	--// 检查该对象是否有远程类数据
     local ClassData = Process:GetClassData(Remote)
     local IsRemoteFunction = ClassData.IsRemoteFunction
 	local NoReciveHook = ClassData.NoReciveHook
     local Method = ClassData.Receive[1]
 
-	--// Check if the Recive should be hooked
+	--// 检查是否应当 hook 接收
 	if NoReciveHook then return end
 
-	--// New callback function
+	--// 新的回调函数
 	local function Callback(...)
         return Process:ProcessRemote({
             Method = Method,
@@ -311,26 +311,26 @@ function Hook:ConnectClientRecive(Remote)
         }, Remote, ...)
 	end
 
-	--// Connect remote
+	--// 连接远程
 	if not IsRemoteFunction then
    		Remote[Method]:Connect(Callback)
-	else -- Remote functions
+	else -- RemoteFunction
 		self:HookClientInvoke(Remote, Method, Callback)
 	end
 end
 
 function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
-	--// Librareis
+	--// 库
 	local ReturnSpoofs = Libraries.ReturnSpoofs
 	local ProcessLib = Libraries.Process
 	local Communication = Libraries.Communication
 	local Generation = Libraries.Generation
 	local Config = Libraries.Config
 
-	--// Check for configuration overwrites
+	--// 检查配置覆盖
 	ProcessLib:CheckConfig(Config)
 
-	--// Init data
+	--// 初始化数据
 	local InitData = {
 		Modules = {
 			ReturnSpoofs = ReturnSpoofs,
@@ -348,11 +348,11 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 		})
 	}
 
-	--// Init libraries
+	--// 初始化库
 	Communication:Init(InitData)
 	ProcessLib:Init(InitData)
 
-	--// Communication configuration
+	--// 通信配置
 	local Channel, IsWrapped = Communication:GetCommChannel(ChannelId)
 	Communication:SetChannel(Channel)
 	Communication:AddTypeCallbacks({
@@ -371,19 +371,19 @@ function Hook:BeginService(Libraries, ExtraData, ChannelId, ...)
 				self:PatchFunctions()
 			end
 			self:BeginHooks()
-			Communication:ConsolePrint("Hooks loaded")
+			Communication:ConsolePrint("Hooks 已加载")
 		end
 	})
 	
-	--// Process configuration
+	--// Process 配置
 	ProcessLib:SetChannel(Channel, IsWrapped)
 	ProcessLib:SetExtraData(ExtraData)
 
-	--// Hook configuration
+	--// Hook 配置
 	self:Init(InitData)
 
 	if ExtraData and ExtraData.IsActor then
-		Communication:ConsolePrint("Actor connected!")
+		Communication:ConsolePrint("Actor 已连接！")
 	end
 end
 
@@ -393,7 +393,7 @@ function Hook:LoadMetaHooks(ActorCode: string, ChannelId: number)
 		self:RunOnActors(ActorCode, ChannelId)
 	end
 
-	--// Hook current thread
+	--// Hook 当前线程
 	self:BeginService(Modules, nil, ChannelId) 
 end
 
@@ -403,15 +403,15 @@ function Hook:LoadReceiveHooks()
 
 	if NoReceiveHooking then return end
 
-	--// Remote added
+	--// Remote 添加时
 	game.DescendantAdded:Connect(function(Remote) -- TODO
 		self:ConnectClientRecive(Remote)
 	end)
 
-	--// Collect remotes with nil parents
+	--// 收集父级为 nil 的 Remotes
 	self:MultiConnect(getnilinstances())
 
-	--// Search for remotes
+	--// 遍历搜索 Remotes
 	for _, Service in next, game:GetChildren() do
 		if table.find(BlackListedServices, Service.ClassName) then continue end
 		self:MultiConnect(Service:GetDescendants())
