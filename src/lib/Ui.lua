@@ -1,28 +1,28 @@
 local Ui = {
 	DefaultEditorContent = [=[--[[
-	Sigma Spy, written by depso
-	Hooks rewritten and many more fixes!
+	Sigma Spy，由 depso 编写
+	钩子已重写，并修复了更多问题！
 
-	Discord: https://discord.gg/bkUkm2vSbv
+	Discord：https://discord.gg/bkUkm2vSbv
 ]]]=],
 	LogLimit = 100,
     SeasonLabels = { 
-        January = "⛄ %s ⛄", 
-        February = "🌨️ %s 🏂", 
-        March = "🌹 %s🌺 ", 
-        April = "🐣 %s ✝️", 
-        May = "🐝 %s 🌞", 
-        June = "🌲 %s 🥕", 
-        July = "🌊 %s 🌅", 
-        August = "☀️ %s 🌞", 
-        September = "🍁 %s 🍁", 
-        October = "🎃 %s 🎃", 
-        November = "🍂 %s 🍂", 
-        December = "🎄 %s 🎁"
+        ["一月"] = "⛄ %s ⛄", 
+        ["二月"] = "🌨️ %s 🏂", 
+        ["三月"] = "🌹 %s🌺 ", 
+        ["四月"] = "🐣 %s ✝️", 
+        ["五月"] = "🐝 %s 🌞", 
+        ["六月"] = "🌲 %s 🥕", 
+        ["七月"] = "🌊 %s 🌅", 
+        ["八月"] = "☀️ %s 🌞", 
+        ["九月"] = "🍁 %s 🍁", 
+        ["十月"] = "🎃 %s 🎃", 
+        ["十一月"] = "🍂 %s 🍂", 
+        ["十二月"] = "🎄 %s 🎁"
     },
 	Scales = {
-		["Mobile"] = UDim2.fromOffset(480, 280),
-		["Desktop"] = UDim2.fromOffset(600, 400),
+		["移动设备"] = UDim2.fromOffset(480, 280),
+		["桌面设备"] = UDim2.fromOffset(600, 400),
 	},
     BaseConfig = {
         Theme = "SigmaSpy",
@@ -119,7 +119,7 @@ function Ui:CheckScale()
 	local Scales = self.Scales
 
 	local IsMobile = ReGui:IsMobileDevice()
-	local Device = IsMobile and "Mobile" or "Desktop"
+	local Device = IsMobile and "移动设备" or "桌面设备"
 
 	BaseConfig.Size = Scales[Device]
 end
@@ -131,7 +131,13 @@ end
 function Ui:TurnSeasonal(Text: string): string
     local SeasonLabels = self.SeasonLabels
     local Month = os.date("%B")
-    local Base = SeasonLabels[Month]
+	-- 将英文月份名转换为中文，以便匹配 SeasonLabels 的键
+	local ChineseMonth = ({
+		January = "一月", February = "二月", March = "三月", April = "四月", 
+		May = "五月", June = "六月", July = "七月", August = "八月", 
+		September = "九月", October = "十月", November = "十一月", December = "十二月"
+	})[Month] or Month 
+    local Base = SeasonLabels[ChineseMonth]
 
     return Base:format(Text)
 end
@@ -158,9 +164,8 @@ function Ui:FontWasSuccessful()
 
 	--// Error message
 	self:ShowModal({
-		"Unfortunately your executor was unable to download the font and therefore switched to the Dark theme",
-		"\nIf you would like to use the ImGui theme, \nplease download the font (assets/ProggyClean.ttf)",
-		"and put put it in your workspace folder\n(Sigma Spy/assets)"
+		"遗憾的是，您的执行器未能下载字体，因此已切换到“Dark”（深色）主题",
+		"\n如果您想使用 ImGui 主题，请下载字体 (assets/ProggyClean.ttf)\n并将其放入您的工作区文件夹\n(Sigma Spy/assets) 中",
 	})
 end
 
@@ -285,7 +290,7 @@ function Ui:ShowModal(Lines: table)
 		TextWrapped = true
 	})
 	ModalWindow:Button({
-		Text = "Okay",
+		Text = "好的",
 		Callback = function()
 			ModalWindow:ClosePopup()
 		end,
@@ -294,16 +299,16 @@ end
 
 function Ui:ShowUnsupportedExecutor(Name: string)
 	Ui:ShowModal({
-		"Unfortunately Sigma Spy is not supported on your executor",
-		"The best free option is Swift (discord.gg/getswiftgg)",
-		`\nYour executor: {Name}`
+		"遗憾的是，您的执行器不支持 Sigma Spy",
+		"最佳免费选择是 Swift (discord.gg/getswiftgg)",
+		`\n您的执行器：{Name}`
 	})
 end
 
 function Ui:ShowUnsupported(FuncName: string)
 	Ui:ShowModal({
-		"Unfortunately Sigma Spy is not supported on your executor",
-		`\nMissing function: {FuncName}`
+		"遗憾的是，您的执行器不支持 Sigma Spy",
+		`\n缺失函数：{FuncName}`
 	})
 end
 
@@ -456,29 +461,29 @@ end
 
 function Ui:ConsoleTab(InfoSelector)
 	local Tab = InfoSelector:CreateTab({
-		Name = "Console"
+		Name = "控制台"
 	})
 
 	local Console
 	local ButtonsRow = Tab:Row()
 
 	ButtonsRow:Button({
-		Text = "Clear",
+		Text = "清除",
 		Callback = function()
 			Console:Clear()
 		end
 	})
 	ButtonsRow:Button({
-		Text = "Copy",
+		Text = "复制",
 		Callback = function()
 			toclipboard(Console:GetValue())
 		end
 	})
 	ButtonsRow:Button({
-		Text = "Pause",
+		Text = "暂停",
 		Callback = function(self)
 			local Enabled = not Console.Enabled
-			local Text = Enabled and "Pause" or "Paused"
+			local Text = Enabled and "暂停" or "已暂停"
 			self.Text = Text
 
 			--// Update console
@@ -489,7 +494,7 @@ function Ui:ConsoleTab(InfoSelector)
 
 	--// Create console
 	Console = Tab:Console({
-		Text = "-- Created by depso",
+		Text = "-- 由 depso 创建",
 		ReadOnly = true,
 		Border = false,
 		Fill = true,
@@ -511,11 +516,11 @@ end
 
 function Ui:MakeOptionsTab(InfoSelector)
 	local Tab = InfoSelector:CreateTab({
-		Name = "Options"
+		Name = "选项"
 	})
 
 	--// Add global options
-	Tab:Separator({Text="Logs"})
+	Tab:Separator({Text="日志"})
 	self:CreateButtons(Tab, {
 		Base = {
 			Size = UDim2.new(1, 0, 0, 20),
@@ -523,7 +528,7 @@ function Ui:MakeOptionsTab(InfoSelector)
 		},
 		Buttons = {
 			{
-				Text = "Clear logs",
+				Text = "清除日志",
 				Callback = function()
 					local Tab = ActiveData and ActiveData.Tab or nil
 
@@ -538,32 +543,32 @@ function Ui:MakeOptionsTab(InfoSelector)
 				end,
 			},
 			{
-				Text = "Clear blocks",
+				Text = "清除拦截",
 				Callback = function()
 					Process:UpdateAllRemoteData("Blocked", false)
 				end,
 			},
 			{
-				Text = "Clear excludes",
+				Text = "清除排除",
 				Callback = function()
 					Process:UpdateAllRemoteData("Excluded", false)
 				end,
 			},
 			{
-				Text = "Join Discord",
+				Text = "加入 Discord",
 				Callback = function()
 					Process:PromptDiscordInvite("s9ngmUDWgb")
 					self:SetClipboard("https://discord.gg/s9ngmUDWgb")
 				end,
 			},
 			{
-				Text = "Copy Github",
+				Text = "复制 Github",
 				Callback = function()
 					self:SetClipboard("https://github.com/depthso/Sigma-Spy")
 				end,
 			},
 			{
-				Text = "Edit Spoofs",
+				Text = "编辑欺骗脚本",
 				Callback = function()
 					self:EditFile("Return spoofs.lua", true, function(Window, Content: string)
 						Window:Close()
@@ -575,19 +580,19 @@ function Ui:MakeOptionsTab(InfoSelector)
 	})
 
 	--// Flag options
-	Tab:Separator({Text="Settings"})
+	Tab:Separator({Text="设置"})
 	self:CreateElements(Tab, Flags:GetFlags())
 
 	self:AddDetailsSection(Tab)
 end
 
 function Ui:AddDetailsSection(OptionsTab)
-	OptionsTab:Separator({Text="Information"})
+	OptionsTab:Separator({Text="信息"})
 	OptionsTab:BulletText({
 		Rows = {
-			"Sigma spy - Written by depso!",
-			"Libraries: Roblox-Parser, Dear-ReGui",
-			"Thank you syn.lua for suggesting I make this"
+			"Sigma spy - 由 depso 编写！",
+			"库：Roblox-Parser, Dear-ReGui",
+			"感谢 syn.lua 建议我制作这个工具"
 		}
 	})
 end
@@ -605,7 +610,7 @@ function Ui:MakeEditorTab(InfoSelector)
 
 	--// Create tab
 	local EditorTab = InfoSelector:CreateTab({
-		Name = "Editor"
+		Name = "编辑器"
 	})
 
 	--// IDE
@@ -624,21 +629,21 @@ function Ui:MakeEditorTab(InfoSelector)
 		NoTable = true,
 		Buttons = {
 			{
-				Text = "Copy",
+				Text = "复制",
 				Callback = function()
 					local Script = CodeEditor:GetText()
 					self:SetClipboard(Script)
 				end
 			},
 			{
-				Text = "Run",
+				Text = "运行",
 				Callback = function()
 					local Script = CodeEditor:GetText()
 					local Func, Error = loadstring(Script, "SigmaSpy-USERSCRIPT")
 
 					--// Syntax check
 					if not Func then
-						self:ShowModal({"Error running script!\n", Error})
+						self:ShowModal({"运行脚本错误！\n", Error})
 						return
 					end
 
@@ -646,19 +651,19 @@ function Ui:MakeEditorTab(InfoSelector)
 				end
 			},
 			{
-				Text = "Get return",
+				Text = "获取返回值",
 				Callback = MakeActiveDataCallback("GetReturn")
 			},
 			{
-				Text = "Script",
+				Text = "脚本",
 				Callback = MakeActiveDataCallback("ScriptOptions")
 			},
 			{
-				Text = "Build",
+				Text = "构建",
 				Callback = MakeActiveDataCallback("BuildScript")
 			},
 			{
-				Text = "Pop-out",
+				Text = "弹出窗口",
 				Callback = function()
 					local Script = CodeEditor:GetText()
 					local Tile = ActiveData and ActiveData.Task or "Sigma Spy"
@@ -701,7 +706,7 @@ function Ui:MakeEditorPopoutWindow(Content: string, WindowConfig: table)
 
 	--// Default buttons
 	table.insert(Buttons, {
-		Text = "Copy",
+		Text = "复制",
 		Callback = function()
 			local Script = CodeEditor:GetText()
 			self:SetClipboard(Script)
@@ -734,14 +739,14 @@ function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, s
 	
 	local Buttons = {
 		{
-			Text = "Save",
+			Text = "保存",
 			Callback = function()
 				local Script = CodeEditor:GetText()
 				local Success, Error = loadstring(Script, "SigmaSpy-Editor")
 
 				--// Syntax check
 				if not Success then
-					self:ShowModal({"Error saving file!\n", Error})
+					self:ShowModal({"保存文件错误！\n", Error})
 					return
 				end
 				
@@ -758,7 +763,7 @@ function Ui:EditFile(FilePath: string, InFolder: boolean, OnSaveFunc: ((table, s
 
 	--// Create Editor Window
 	CodeEditor, Window = self:MakeEditorPopoutWindow(Content, {
-		Title = `Editing: {FilePath}`,
+		Title = `正在编辑：{FilePath}`,
 		Buttons = Buttons
 	})
 end
@@ -816,7 +821,7 @@ end
 
 function Ui:Decompile(Editor: table, Script: Script)
 	local Header = "--BOOIIII THIS IS SO TUFF FLIPPY SKIBIDI AURA (SIGMA SPY)"
-	Editor:SetText("--Decompiling... +9999999 AURA (mango phonk)")
+	Editor:SetText("--正在反编译... +9999999 AURA (mango phonk)")
 
 	--// Decompile script
 	local Decompiled, IsError = Process:Decompile(Script)
@@ -859,7 +864,7 @@ function Ui:DisplayTable(Parent, Config: DisplayTableConfig): table
 			local Column = Row:NextColumn()
 			
 			--// Value text
-			local Value = Catagory == "Name" and Name or DataTable[Name]
+			local Value = Catagory == "名称" and Name or DataTable[Name]
 			if not Value then continue end
 
 			--// Create filtered label
@@ -899,7 +904,7 @@ function Ui:SetFocusedRemote(Data)
 
 	local TabFocused = self:RemovePreviousTab()
 	local Tab = InfoSelector:CreateTab({
-		Name = self:FilterName(`Remote: {RemoteName}`, 50),
+		Name = self:FilterName(`远程事件/函数：{RemoteName}`, 50),
 		Focused = TabFocused
 	})
 
@@ -930,14 +935,14 @@ function Ui:SetFocusedRemote(Data)
 		--// Reject client events
 		if IsReceive then 
 			Ui:ShowModal({
-				"Recieves do not have a script because it's a Connection"
+				"接收事件没有脚本，因为它是一个连接 (Connection)"
 			})
 			return 
 		end
 
 		--// Check if script exists
 		if not Script and not NoMissingCheck then 
-			Ui:ShowModal({"The Script has been destroyed by the game (-9999999 AURA)"})
+			Ui:ShowModal({"脚本已被游戏销毁 (-9999999 AURA)"})
 			return
 		end
 
@@ -947,27 +952,27 @@ function Ui:SetFocusedRemote(Data)
 	--// Functions
 	function Data:ScriptOptions(Button: GuiButton)
 		Ui:MakeButtonMenu(Button, {self}, {
-			["Caller Info"] = DataConnection("GenerateInfo"),
-			["Decompile"] = DataConnection("Decompile", "SourceScript"),
-			["Decompile Calling"] = DataConnection("Decompile", "CallingScript"),
-			["Repeat Call"] = DataConnection("RepeatCall"),
-			["Save Bytecode"] = DataConnection("SaveBytecode"),
+			["调用者信息"] = DataConnection("GenerateInfo"),
+			["反编译"] = DataConnection("Decompile", "SourceScript"),
+			["反编译调用脚本"] = DataConnection("Decompile", "CallingScript"),
+			["重复调用"] = DataConnection("RepeatCall"),
+			["保存字节码"] = DataConnection("SaveBytecode"),
 		})
 	end
 	function Data:BuildScript(Button: GuiButton)
 		Ui:MakeButtonMenu(Button, {self}, {
-			["Save"] = DataConnection("SaveScript"),
-			["Call Remote"] = DataConnection("MakeScript", "Remote"),
-			["Block Remote"] = DataConnection("MakeScript", "Block"),
-			["Repeat For"] = DataConnection("MakeScript", "Repeat"),
-			["Spam Remote"] = DataConnection("MakeScript", "Spam")
+			["保存"] = DataConnection("SaveScript"),
+			["调用远程事件/函数"] = DataConnection("MakeScript", "Remote"),
+			["拦截远程事件/函数"] = DataConnection("MakeScript", "Block"),
+			["重复执行（For 循环）"] = DataConnection("MakeScript", "Repeat"),
+			["垃圾邮件式调用远程事件/函数"] = DataConnection("MakeScript", "Spam")
 		})
 	end
 	function Data:SaveScript()
 		local FilePath = Generation:TimeStampFile(self.Task)
 		writefile(FilePath, CodeEditor:GetText())
 
-		Ui:ShowModal({"Saved script to", FilePath})
+		Ui:ShowModal({"脚本已保存到", FilePath})
 	end
 	function Data:SaveBytecode()
 		--// Problem check
@@ -976,7 +981,7 @@ function Ui:SetFocusedRemote(Data)
 		--// getscriptbytecode
     	local Success, Bytecode = pcall(getscriptbytecode, Script)
 		if not Success then
-			Ui:ShowModal({"Failed to get Scripte bytecode (-9999999 AURA)"})
+			Ui:ShowModal({"获取脚本字节码失败 (-9999999 AURA)"})
 			return
 		end
 
@@ -985,11 +990,11 @@ function Ui:SetFocusedRemote(Data)
 		local FilePath = Generation:TimeStampFile(PathBase)
 		writefile(FilePath, Bytecode)
 
-		Ui:ShowModal({"Saved bytecode to", FilePath})
+		Ui:ShowModal({"字节码已保存到", FilePath})
 	end
 	function Data:MakeScript(ScriptType: string)
 		local Script = Generation:RemoteScript(Module, self, ScriptType)
-		SetIDEText(Script, `Editing: {RemoteName}.lua`)
+		SetIDEText(Script, `正在编辑：{RemoteName}.lua`)
 	end
 	function Data:RepeatCall()
 		local Signal = Hook:Index(Remote, Method)
@@ -1005,17 +1010,17 @@ function Ui:SetFocusedRemote(Data)
 
 		--// Error messages
 		if not IsRemoteFunction then
-			Ui:ShowModal({"The Remote is not a Remote Function (-9999999 AURA)"})
+			Ui:ShowModal({"此远程事件/函数不是 Remote Function (-9999999 AURA)"})
 			return
 		end
 		if not ReturnValues then
-			Ui:ShowModal({"No return values (-9999999 AURA)"})
+			Ui:ShowModal({"没有返回值 (-9999999 AURA)"})
 			return
 		end
 
 		--// Generate script
 		local Script = Generation:TableScript(Module, ReturnValues)
-		SetIDEText(Script, `Return Values for: {RemoteName}`)
+		SetIDEText(Script, `返回值：{RemoteName}`)
 	end
 	function Data:GenerateInfo()
 		--// Problem check
@@ -1023,7 +1028,7 @@ function Ui:SetFocusedRemote(Data)
 
 		--// Generate script
 		local Script = Generation:AdvancedInfo(Module, self)
-		SetIDEText(Script, `Advanced Info for: {RemoteName}`)
+		SetIDEText(Script, `高级信息：{RemoteName}`)
 	end
 	function Data:Decompile(WhichScript: string)
 		local DecompilePopout = Flags:GetFlagValue("DecompilePopout")
@@ -1032,7 +1037,7 @@ function Ui:SetFocusedRemote(Data)
 
 		--// Problem check
 		if not ScriptCheck(ToDecompile, true) then return end
-		local Task = Ui:FilterName(`Viewing: {ToDecompile}.lua`, 200)
+		local Task = Ui:FilterName(`正在查看：{ToDecompile}.lua`, 200)
 		
 		--// Automatically Pop-out the editor for decompiling if enabled
 		if DecompilePopout then
@@ -1057,7 +1062,7 @@ function Ui:SetFocusedRemote(Data)
 		},
 		Buttons = {
 			{
-				Text = "Copy script path",
+				Text = "复制脚本路径",
 				Callback = function()
 					SetClipboard(Parser:MakePathString({
 						Object = Script,
@@ -1066,7 +1071,7 @@ function Ui:SetFocusedRemote(Data)
 				end,
 			},
 			{
-				Text = "Copy remote path",
+				Text = "复制远程事件/函数路径",
 				Callback = function()
 					SetClipboard(Parser:MakePathString({
 						Object = Remote,
@@ -1075,7 +1080,7 @@ function Ui:SetFocusedRemote(Data)
 				end,
 			},
 			{
-				Text = "Remove log",
+				Text = "移除日志",
 				Callback = function()
 					InfoSelector:RemoveTab(Tab)
 					Data.Selectable:Remove()
@@ -1084,15 +1089,15 @@ function Ui:SetFocusedRemote(Data)
 				end,
 			},
 			{
-				Text = "Dump logs",
+				Text = "导出日志",
 				Callback = function()
 					local Logs = HeaderData.Entries
 					local FilePath = Generation:DumpLogs(Logs)
-					self:ShowModal({"Saved dump to", FilePath})
+					self:ShowModal({"导出文件已保存到", FilePath})
 				end,
 			},
 			{
-				Text = "View Connections",
+				Text = "查看连接",
 				Callback = function()
 					local Method = ClassData.Receive[1]
 					local Signal = Remote[Method]
@@ -1104,7 +1109,7 @@ function Ui:SetFocusedRemote(Data)
 
 	--// Remote information table
 	self:DisplayTable(Tab, {
-		Rows = {"Name", "Value"},
+		Rows = {"名称", "值"},
 		Table = Data,
 		ToDisplay = ToDisplay,
 		Flags = {
@@ -1117,7 +1122,7 @@ function Ui:SetFocusedRemote(Data)
 	--// Arguments table script
 	if TableArgs then
 		local Parsed = Generation:TableScript(Module, Args)
-		SetIDEText(Parsed, `Arguments for {RemoteName}`)
+		SetIDEText(Parsed, `参数：{RemoteName}`)
 		return
 	end
 
@@ -1127,14 +1132,14 @@ end
 
 function Ui:ViewConnections(RemoteName: string, Signal: RBXScriptConnection)
 	local Window = self:CreateWindow({
-		Title = `Connections for: {RemoteName}`,
+		Title = `连接：{RemoteName}`,
 		Size = UDim2.fromOffset(450, 250)
 	})
 
 	local ToDisplay = {
-		"Enabled",
-		"LuaConnection",
-		"Script"
+		"Enabled", -- 保持英文，通常在代码上下文中使用
+		"LuaConnection", -- 保持英文，通常在代码上下文中使用
+		"Script" -- 保持英文，通常在代码上下文中使用
 	}
 
 	--// Get Filtered connections
@@ -1150,9 +1155,9 @@ function Ui:ViewConnections(RemoteName: string, Signal: RBXScriptConnection)
 	local ButtonsForValues = {
 		["Script"] = function(Row, Value)
 			Row:Button({
-				Text = "Decompile",
+				Text = "反编译",
 				Callback = function()
-					local Task = self:FilterName(`Viewing: {Value}.lua`, 200)
+					local Task = self:FilterName(`正在查看：{Value}.lua`, 200)
 					local Editor = self:MakeEditorPopoutWindow(nil, {
 						Title = Task
 					})
@@ -1162,10 +1167,10 @@ function Ui:ViewConnections(RemoteName: string, Signal: RBXScriptConnection)
 		end,
 		["Enabled"] = function(Row, Enabled, Connection)
 			Row:Button({
-				Text = Enabled and "Disable" or "Enable",
+				Text = Enabled and "禁用" or "启用",
 				Callback = function(self)
 					Enabled = not Enabled
-					self.Text = Enabled and "Disable" or "Enable"
+					self.Text = Enabled and "禁用" or "启用"
 
 					--// Enable or disable the connection
 					if Enabled then
@@ -1179,7 +1184,7 @@ function Ui:ViewConnections(RemoteName: string, Signal: RBXScriptConnection)
 	}
 
 	--// Make headers on the table
-	self:MakeTableHeaders(Table, ToDisplay)
+	self:MakeTableHeaders(Table, {"已启用", "Lua 连接", "脚本"})
 
 	for _, Connection in Connections do
 		local Row = Table:Row()
@@ -1359,9 +1364,6 @@ function Ui:CreateLog(Data: Log)
 	local LogRecives = Flags:GetFlagValue("LogRecives")
 	if not LogRecives and IsReceive then return end
 
-	local SelectNewest = Flags:GetFlagValue("SelectNewest")
-	local NoTreeNodes = Flags:GetFlagValue("NoTreeNodes")
-
     --// Excluded check
     if RemoteData.Excluded then return end
 
@@ -1418,6 +1420,7 @@ function Ui:CreateLog(Data: Log)
 	Header:LogAdded(Data)
 
 	--// Auto select check
+	local SelectNewest = Flags:GetFlagValue("SelectNewest")
 	local GroupSelected = ActiveData and ActiveData.HeaderData == Header
 	if SelectNewest and GroupSelected then
 		self:SetFocusedRemote(Data)
