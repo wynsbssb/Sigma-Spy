@@ -13,10 +13,10 @@ type RemoteData = {
 	NoVariables: boolean?
 }
 
---// Module
+--// 模块
 local Generation = {
-	DumpBaseName = "SigmaSpy-Dump %s.lua", -- "-- Generated with sigma spy BOIIIIIIIII (+9999999 AURA)\n"
-	Header = "-- Generated with Sigma Spy Github: https://github.com/depthso/Sigma-Spy\n",
+	DumpBaseName = "SigmaSpy-Dump %s.lua", -- "-- 使用 Sigma Spy 生成 BOIIIIIIIII (+9999999 AURA)\n"
+	Header = "-- 使用 Sigma Spy 生成 Github: https://github.com/depthso/Sigma-Spy\n",
 	ScriptTemplates = {
 		["Remote"] = {
 			{"%RemoteCall%"}
@@ -58,7 +58,7 @@ local Generation = {
 	}
 }
 
---// Modules
+--// 模块变量
 local Config
 local Hook
 local ParserModule
@@ -76,12 +76,12 @@ function Generation:Init(Data: table)
     local Modules = Data.Modules
 	local Configuration = Modules.Configuration
 
-	--// Modules
+	--// 模块
 	Config = Modules.Config
 	Hook = Modules.Hook
 	Flags = Modules.Flags
 	
-	--// Import parser
+	--// 导入解析器
 	local ParserUrl = Configuration.ParserUrl
 	self:LoadParser(ParserUrl)
 end
@@ -101,7 +101,7 @@ function Generation:WriteDump(Content: string): string
 	local DumpBaseName = self.DumpBaseName
 	local FilePath = self:TimeStampFile(DumpBaseName)
 
-	--// Write to file
+	--// 写入文件
 	writefile(FilePath, Content)
 
 	return FilePath
@@ -126,7 +126,7 @@ function Generation:GetBase(Module): (string, boolean)
 
 	local Code = NoComments and "" or Header
 
-	--// Generate variables code
+	--// 生成变量代码
 	local Variables = Module.Parser:MakeVariableCode({
 		"Services", "Remote", "Variables"
 	}, NoComments)
@@ -147,7 +147,7 @@ function Generation:GetSwaps()
 		Swaps[Object] = Data
 	end
 
-	--// Invoke GetSwaps function
+	--// 调用获取替换的函数
 	Func(Interface)
 
 	return Swaps
@@ -170,10 +170,10 @@ function Generation:NewParser(Extra: table?)
 		end,
 	}
 
-	--// Merge extra configuration
+	--// 合并额外配置
 	Merge(Configuration, Extra)
 
-	--// Create new parser instance
+	--// 创建新的解析器实例
 	return ParserModule:New(Configuration)
 end
 
@@ -202,7 +202,7 @@ function Generation:CallRemoteScript(Data, Info: CallInfo): string
 
 	local IndentString = self:MakeIndent(Indent)
 
-	--// Parse arguments
+	--// 解析参数
 	local ParsedArgs, ItemsCount, IsArray = Parser:ParseTableIntoString({
 		NoBrackets = true,
 		NoVariables = NoVariables,
@@ -210,41 +210,41 @@ function Generation:CallRemoteScript(Data, Info: CallInfo): string
 		Indent = Indent
 	})
 
-	--// Create table variable if not an array
+	--// 如果不是数组则创建变量
 	if not IsArray or NoVariables then
 		ParsedArgs = Variables:MakeVariable({
 			Value = ("{%s}"):format(ParsedArgs),
-			Comment = not IsArray and "Arguments aren't ordered" or nil,
+			Comment = not IsArray and "参数未排序" or nil,
 			Name = "RemoteArgs",
 			Class = "Remote"
 		})
 	end
 
-	--// Wrap in a unpack if the table is a dict
+	--// 如果是字典表则用 unpack 包装
 	if ItemsCount > 0 and not IsArray then
 		ParsedArgs = `unpack({ParsedArgs}, 1, table.maxn({ParsedArgs}))`
 	end
 
-	--// Firesignal script for client recieves
+	--// 客户端接收时 firesignal 脚本
 	if IsReceive then
 		local Second = ItemsCount <= 0 and "" or `, {ParsedArgs}`
 		local Signal = `{RemoteVariable}.{Method}`
 
-		local Code = `-- This data was received from the server`
+		local Code = `-- 该数据来自服务器`
 		ParsedArgs = self:Indent(IndentString, Code)
 		Code ..= `\n{IndentString}firesignal({Signal}{Second})`
 		
 		return Code
 	end
 	
-	--// Remote invoke script
+	--// 远程调用脚本
 	return `{RemoteVariable}:{Method}({ParsedArgs})`
 end
 
---// Variables: %VariableName%
+--// 变量: %VariableName%
 function Generation:ApplyVariables(String: string, Variables: table, ...): string
 	for Variable, Value in Variables do
-		--// Invoke value function
+		--// 如果是函数则调用
 		if typeof(Value) == "function" then
 			Value = Value(...)
 		end
@@ -268,7 +268,7 @@ function Generation:MakeCallCode(ScriptType: string, Data: ScriptData): string
 	local ScriptTemplates = self.ScriptTemplates
 	local Template = ScriptTemplates[ScriptType]
 
-	assert(Template, `{ScriptType} is not a valid script type!`)
+	assert(Template, `{ScriptType} 不是有效的脚本类型！`)
 
 	local Variables = Data.Variables
 	local MetaMethod = Data.MetaMethod
@@ -278,7 +278,7 @@ function Generation:MakeCallCode(ScriptType: string, Data: ScriptData): string
 		local Out = ""
 
 		for Key, Value in next, Template do
-			--// MetaMethod check
+			--// 检查是否仅限于元方法
 			local IsMetaTypeOnly = table.find(MetaMethods, Key)
 			if IsMetaTypeOnly then
 				if Key == MetaMethod then
@@ -288,15 +288,15 @@ function Generation:MakeCallCode(ScriptType: string, Data: ScriptData): string
 				continue
 			end
 
-			--// Information
+			--// 处理行内容
 			local Content, Indent = Value[1], Value[2] or 0
 			Indent = math.clamp(Indent-1, 0, 9999)
 
-			--// Make line
+			--// 替换变量
 			local Line = self:ApplyVariables(Content, Variables, Indent)
 			local IndentString = self:MakeIndent(Indent)
 
-			--// Append to code
+			--// 拼接代码
 			Out ..= `{IndentString}{Line}\n`
 		end
 
@@ -307,34 +307,34 @@ function Generation:MakeCallCode(ScriptType: string, Data: ScriptData): string
 end
 
 function Generation:RemoteScript(Module, Data: RemoteData, ScriptType: string): string
-	--// Unpack data
+	--// 解包数据
 	local Remote = Data.Remote
 	local Args = Data.Args
 	local Method = Data.Method
 	local MetaMethod = Data.MetaMethod
 
-	--// Remote info
+	--// 远程信息
 	local ClassName = Hook:Index(Remote, "ClassName")
 	local IsNilParent = Hook:Index(Remote, "Parent") == nil
 	
 	local Variables = Module.Variables
 	local Formatter = Module.Formatter
 	
-	--// Pre-render variables
+	--// 预渲染变量
 	Variables:PrerenderVariables(Args, {"Instance"})
 
-	--// Create remote variable
+	--// 创建远程变量
 	local RemoteVariable = Variables:MakeVariable({
 		Value = Formatter:Format(Remote, {
 			NoVariables = true
 		}),
-		Comment = `{ClassName} {IsNilParent and "| Remote parent is nil" or ""}`,
+		Comment = `{ClassName} {IsNilParent and "| 远程父级为空" or ""}`,
 		Name = Formatter:MakeName(Remote),
 		Lookup = Remote,
 		Class = "Remote"
 	})
 
-	--// Generate call script
+	--// 生成调用代码
 	local CallCode = self:MakeCallCode(ScriptType, {
 		Variables = {
 			["RemoteCall"] = function(Indent: number)
@@ -351,7 +351,7 @@ function Generation:RemoteScript(Module, Data: RemoteData, ScriptType: string): 
 		MetaMethod = MetaMethod
 	})
 	
-	--// Make code
+	--// 拼接完整代码
 	local Code = self:GetBase(Module)
 	return `{Code}\n{CallCode}`
 end
@@ -364,10 +364,10 @@ function Generation:ConnectionsTable(Signal: RBXScriptSignal): table
 		local Function = Connection.Function
 		local Script = rawget(getfenv(Function), "script")
 
-		--// Skip if self
+		--// 如果是当前脚本则跳过
 		if Script == ThisScript then continue end
 
-		--// Connection data
+		--// 连接信息
 		local Data = {
 			Function = Function,
 			State = Connection.State,
@@ -381,15 +381,15 @@ function Generation:ConnectionsTable(Signal: RBXScriptSignal): table
 end
 
 function Generation:TableScript(Module, Table: table): string
-	--// Pre-render variables
+	--// 预渲染变量
 	Module.Variables:PrerenderVariables(Table, {"Instance"})
 
-	--// Parse arguments
+	--// 解析参数
 	local ParsedTable = Module.Parser:ParseTableIntoString({
 		Table = Table
 	})
 
-	--// Generate script
+	--// 生成脚本
 	local Code, NoVariables = self:GetBase(Module)
 	local Seperator = NoVariables and "" or "\n"
 	Code ..= `{Seperator}return {ParsedTable}`
@@ -418,7 +418,7 @@ function Generation:ConnectionInfo(Remote: Instance, ClassData: table): table?
 
 	local Connections = {}
 	for _, Method: string in next, ReceiveMethods do
-		pcall(function() -- TODO: GETCALLBACKVALUE
+		pcall(function() -- TODO: 获取回调值
 			local Signal = Hook:Index(Remote, Method)
 			Connections[Method] = self:ConnectionsTable(Signal)
 		end)
@@ -428,13 +428,13 @@ function Generation:ConnectionInfo(Remote: Instance, ClassData: table): table?
 end
 
 function Generation:AdvancedInfo(Module, Data: table): string
-	--// Unpack remote data
+	--// 解包远程数据
 	local Function = Data.CallingFunction
 	local ClassData = Data.ClassData
 	local Remote = Data.Remote
 	local Args = Data.Args
 	
-	--// Advanced info table base
+	--// 高级信息表
 	local FunctionInfo = {
 		["Caller"] = {
 			["SourceScript"] = Data.SourceScript,
@@ -455,13 +455,13 @@ function Generation:AdvancedInfo(Module, Data: table): string
 		["IsActor"] = Data.IsActor,
 	}
 
-	--// Some closures may not be lua
+	--// 某些闭包可能不是 Lua
 	if Function and islclosure(Function) then
 		FunctionInfo["UpValues"] = debug.getupvalues(Function)
 		FunctionInfo["Constants"] = debug.getconstants(Function)
 	end
 
-	--// Generate script
+	--// 生成脚本
 	return self:TableScript(Module, FunctionInfo)
 end
 
@@ -472,7 +472,7 @@ function Generation:DumpLogs(Logs: table): string
 		Calls = {}
 	}
 
-	--// Create new parser instance
+	--// 创建新的解析器实例
 	local Module = Generation:NewParser()
 
 	for _, Data in Logs do
@@ -486,19 +486,19 @@ function Generation:DumpLogs(Logs: table): string
 			CallingScript = Data.CallingScript,
 		}
 
-		--// Append
+		--// 添加调用信息
 		table.insert(Calls, Table)
 
-		--// Set BaseData
+		--// 设置基础数据
 		if not BaseData then
 			BaseData = Data
 		end
 	end
 
-	--// Basedata merge
+	--// 合并基础数据
 	Parsed.Remote = BaseData.Remote
 
-	--// Compile and save
+	--// 编译并保存
 	local Output = self:TableScript(Module, Parsed)
 	local FilePath = self:WriteDump(Output)
 	
