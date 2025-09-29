@@ -15,65 +15,65 @@ local Module = {
     Flags = {
         -- PreventRenaming = {
         --     Value = false,
-        --     Label = "No renaming",
+        --     Label = "禁止重命名",
         -- },
         -- PreventParenting = {
         --     Value = false,
-        --     Label = "No parenting",
+        --     Label = "禁止设置父级",
         -- },
         NoComments = {
             Value = false,
-            Label = "No comments",
+            Label = "无注释",
         },
         SelectNewest = {
             Value = false,
-            Label = "Auto select newest",
+            Label = "自动选择最新",
         },
         DecompilePopout = { -- Lovre SHUSH
             Value = false,
-            Label = "Pop-out decompiles",
+            Label = "反编译弹出窗口",
         },
         IgnoreNil = {
             Value = true,
-            Label = "Ignore nil parents",
+            Label = "忽略空父级",
         },
         LogExploit = {
             Value = true,
-            Label = "Log exploit calls",
+            Label = "记录 Exploit 调用",
         },
         LogRecives = {
             Value = true,
-            Label = "Log receives",
+            Label = "记录接收",
         },
         Paused = {
             Value = false,
-            Label = "Paused",
+            Label = "暂停",
             Keybind = Enum.KeyCode.Q
         },
         KeybindsEnabled = {
             Value = true,
-            Label = "Keybinds Enabled"
+            Label = "启用快捷键"
         },
         FindStringForName = {
             Value = true,
-            Label = "Find arg for name"
+            Label = "查找参数对应名称"
         },
         UiVisible = {
             Value = true,
-            Label = "UI Visible",
+            Label = "界面可见",
             Keybind = Enum.KeyCode.P
         },
         NoTreeNodes = {
             Value = false,
-            Label = "No grouping"
+            Label = "无分组"
         },
         TableArgs = {
             Value = false,
-            Label = "Table args"
+            Label = "表参数"
         },
         NoVariables = {
             Value = false,
-            Label = "No compression"
+            Label = "无变量压缩"
         }
     }
 }
@@ -102,7 +102,7 @@ end
 function Module:GetFlag(Name: string): Flag
     local AllFlags = self:GetFlags()
     local Flag = AllFlags[Name]
-    assert(Flag, "Flag does not exist!")
+    assert(Flag, "标志不存在！")
     return Flag
 end
 
