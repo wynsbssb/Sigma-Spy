@@ -1,4 +1,4 @@
---// Base Configuration
+--// 基础配置
 local Configuration = {
 	UseWorkspace = false, 
 	NoActors = false,
@@ -7,7 +7,7 @@ local Configuration = {
 	ParserUrl = "https://raw.githubusercontent.com/depthso/Roblox-parser/refs/heads/main/dist/Main.luau"
 }
 
---// Load overwrites
+--// 加载覆盖配置
 local Parameters = {...}
 local Overwrites = Parameters[1]
 if typeof(Overwrites) == "table" then
@@ -16,7 +16,7 @@ if typeof(Overwrites) == "table" then
 	end
 end
 
---// Service handler
+--// 服务处理器
 local Services = setmetatable({}, {
 	__index = function(self, Name: string): Instance
 		local Service = game:GetService(Name)
@@ -24,7 +24,7 @@ local Services = setmetatable({}, {
 	end,
 })
 
---// Files module
+--// 文件模块
 local Files = (function()
 	--INSERT: @lib/Files.lua
 end)()
@@ -35,13 +35,13 @@ Files:Init({
 
 local Folder = Files.FolderName
 local Scripts = {
-	--// User configurations
+	--// 用户配置
 	Config = Files:GetModule(`{Folder}/Config`, "Config"),
-	ReturnSpoofs = Files:GetModule(`{Folder}/Return spoofs`, "Return Spoofs"),
+	ReturnSpoofs = Files:GetModule(`{Folder}/Return spoofs`, "返回值欺骗"),
 	Configuration = Configuration,
 	Files = Files,
 
-	--// Libraries
+	--// 库文件
 	Process = {"base64", "COMPILE: @lib/Process.lua"},
 	Hook = {"base64", "COMPILE: @lib/Hook.lua"},
 	Flags = {"base64", "COMPILE: @lib/Flags.lua"},
@@ -50,10 +50,10 @@ local Scripts = {
 	Communication = {"base64", "COMPILE: @lib/Communication.lua"}
 }
 
---// Services
+--// 服务
 local Players: Players = Services.Players
 
---// Dependencies
+--// 依赖项
 local Modules = Files:LoadLibraries(Scripts)
 local Process = Modules.Process
 local Hook = Modules.Hook
@@ -62,29 +62,29 @@ local Generation = Modules.Generation
 local Communication = Modules.Communication
 local Config = Modules.Config
 
---// Use custom font (optional)
+--// 使用自定义字体（可选）
 local FontContent = Files:GetAsset("ProggyClean.ttf", true)
 local FontJsonFile = Files:CreateFont("ProggyClean", FontContent)
 Ui:SetFontFile(FontJsonFile)
 
---// Load modules
+--// 加载模块
 Process:CheckConfig(Config)
 Files:LoadModules(Modules, {
 	Modules = Modules,
 	Services = Services
 })
 
---// ReGui Create window
+--// 创建ReGui窗口
 local Window = Ui:CreateMainWindow()
 
---// Check if Sigma spy is supported
+--// 检查是否支持Sigma间谍工具
 local Supported = Process:CheckIsSupported()
 if not Supported then 
 	Window:Close()
 	return
 end
 
---// Create communication channel
+--// 创建通信通道
 local ChannelId, Event = Communication:CreateChannel()
 Communication:AddCommCallback("QueueLog", function(...)
 	Ui:QueueLog(...)
@@ -93,7 +93,7 @@ Communication:AddCommCallback("Print", function(...)
 	Ui:ConsoleLog(...)
 end)
 
---// Generation swaps
+--// 生成器替换
 local LocalPlayer = Players.LocalPlayer
 Generation:SetSwapsCallback(function(self)
 	self:AddSwap(LocalPlayer, {
@@ -105,30 +105,31 @@ Generation:SetSwapsCallback(function(self)
 	})
 end)
 
---// Create window content
+--// 创建窗口内容
 Ui:CreateWindowContent(Window)
 
---// Begin the Log queue 
+--// 开始日志队列服务
 Ui:SetCommChannel(Event)
 Ui:BeginLogService()
 
---// Load hooks
+--// 加载钩子
 local ActorCode = Files:MakeActorScript(Scripts, ChannelId)
 Hook:LoadHooks(ActorCode, ChannelId)
 
+--// 询问用户是否启用函数补丁
 local EnablePatches = Ui:AskUser({
-	Title = "Enable function patches?",
+	Title = "启用函数补丁？",
 	Content = {
-		"On some executors, function patches can prevent common detections that executor has",
-		"By enabling this, it MAY trigger hook detections in some games, this is why you are asked.",
-		"If it doesn't work, rejoin and press 'No'",
+		"在某些执行器上，函数补丁可以防止常见的执行器检测",
+		"启用此功能可能会在某些游戏中触发钩子检测，因此需要询问",
+		"如果无效，请重新加入游戏并选择'否'",
 		"",
-		"(This does not affect game functionality)"
+		"(不影响游戏功能)"
 	},
-	Options = {"Yes", "No"}
-}) == "Yes"
+	Options = {"是", "否"}
+}) == "是"
 
---// Begin hooks
+--// 开始钩子
 Event:Fire("BeginHooks", {
 	PatchFunctions = EnablePatches
 })
