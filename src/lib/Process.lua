@@ -15,9 +15,9 @@ type RemoteData = {
     OriginalFunc: (Instance, ...any) -> ...any
 }
 
---// Module
+--// 模块
 local Process = {
-    --// Remote classes
+    --// Remote 类
     RemoteClassData = {
         ["RemoteEvent"] = {
             Send = {
@@ -76,17 +76,17 @@ local Process = {
     }
 }
 
---// Modules
+--// 模块
 local Hook
 local Communication
 local ReturnSpoofs
 local Ui
 local Config
 
---// Services
+--// 服务
 local HttpService: HttpService
 
---// Communication channel
+--// 通信通道
 local Channel
 local WrappedChannel = false
 
@@ -103,10 +103,10 @@ function Process:Init(Data)
     local Modules = Data.Modules
     local Services = Data.Services
 
-    --// Services
+    --// 服务
     HttpService = Services.HttpService
 
-    --// Modules
+    --// 模块
     Config = Modules.Config
     Ui = Modules.Ui
     Hook = Modules.Hook
@@ -114,7 +114,7 @@ function Process:Init(Data)
     ReturnSpoofs = Modules.ReturnSpoofs
 end
 
---// Communication
+--// 通信
 function Process:SetChannel(NewChannel: BindableEvent, IsWrapped: boolean)
     Channel = NewChannel
     WrappedChannel = IsWrapped
@@ -133,7 +133,7 @@ end
 function Process:CheckConfig(Config: table)
     local Name = identifyexecutor():lower()
 
-    --// Force configuration overwrites for specific executors
+    --// 针对特定执行器强制配置覆盖
     local Overwrites = self:GetConfigOverwrites(Name)
     if not Overwrites then return end
 
@@ -143,7 +143,7 @@ end
 function Process:CleanCError(Error: string): string
     Error = Error:gsub(":%d+: ", "")
     Error = Error:gsub(", got %a+", "")
-    Error = Error:gsub("invalid argument", "missing argument")
+    Error = Error:gsub("invalid argument", "缺少参数")
     return Error
 end
 
@@ -173,7 +173,7 @@ function Process:DeepCloneTable(Table, Ignore: table?, Visited: table?): table
     if typeof(Table) ~= "table" then return Table end
     local Cache = Visited or {}
 
-    --// Check for cached
+    --// 检查缓存
     if Cache[Table] then
         return Cache[Table]
     end
@@ -182,14 +182,14 @@ function Process:DeepCloneTable(Table, Ignore: table?, Visited: table?): table
     Cache[Table] = New
 
     for Key, Value in next, Table do
-        --// Check if the value is ignored
+        --// 检查是否被忽略
         if Ignore and table.find(Ignore, Value) then continue end
         
         Key = self:CheckValue(Key, Ignore, Cache)
         New[Key] = self:CheckValue(Value, Ignore, Cache)
     end
 
-    --// Master clear
+    --// 主清理
     if not Visited then
         table.clear(Cache)
     end
@@ -221,7 +221,7 @@ function Process:CheckExecutor(): boolean
     local Name = identifyexecutor():lower()
     local IsBlacklisted = table.find(Blacklisted, Name)
 
-    --// Some executors have broken functionality
+    --// 某些执行器功能损坏
     if IsBlacklisted then
         Ui:ShowUnsupportedExecutor(Name)
         return false
@@ -238,12 +238,12 @@ function Process:CheckFunctions(): boolean
         "setreadonly"
     }
 
-    --// Check if the functions exist in the ENV
+    --// 检查环境中是否存在这些函数
     for _, Name in CoreFunctions do
         local Func = self:FuncExists(Name)
         if Func then continue end
 
-        --// Function missing!
+        --// 函数缺失！
         Ui:ShowUnsupported(Name)
         return false
     end
@@ -252,13 +252,13 @@ function Process:CheckFunctions(): boolean
 end
 
 function Process:CheckIsSupported(): boolean
-    --// Check if the executor is blacklisted
+    --// 检查执行器是否被拉黑
     local ExecutorSupported = self:CheckExecutor()
     if not ExecutorSupported then
         return false
     end
 
-    --// Check if the core functions exist
+    --// 检查核心函数是否存在
     local FunctionsSupported = self:CheckFunctions()
     if not FunctionsSupported then
         return false
@@ -284,18 +284,18 @@ end
 function Process:RemoteAllowed(Remote: Instance, TransferType: string, Method: string?): boolean?
     if typeof(Remote) ~= 'Instance' then return end
     
-    --// Check if the Remote is protected
+    --// 检查 Remote 是否受保护
     if self:IsProtectedRemote(Remote) then return end
 
-    --// Fetch class table
+    --// 获取类表
 	local ClassData = self:GetClassData(Remote)
 	if not ClassData then return end
 
-    --// Check if the transfer type has data
+    --// 检查传输类型是否有数据
 	local Allowed = ClassData[TransferType]
 	if not Allowed then return end
 
-    --// Check if the method is allowed
+    --// 检查方法是否允许
 	if Method then
 		return table.find(Allowed, Method) ~= nil
 	end
@@ -316,7 +316,7 @@ function Process:GetRemoteSpoof(Remote: Instance, Method: string, ...): table?
 
     local ReturnValues = Spoof.Return
 
-    --// Call the ReturnValues function type
+    --// 调用函数类型的 ReturnValues
     if typeof(ReturnValues) == "function" then
         ReturnValues = ReturnValues(...)
     end
@@ -335,11 +335,11 @@ function Process:FindCallingLClosure(Offset: number)
     while true do
         Offset += 1
 
-        --// Check if the stack level is valid
+        --// 检查栈层是否有效
         local IsValid = debug.info(Offset, "l") ~= -1
         if not IsValid then continue end
 
-        --// Check if the function is valid
+        --// 检查函数是否有效
         local Function = debug.info(Offset, "f")
         if not Function then return end
         if Getfenv(Function) == SigmaENV then continue end
@@ -352,7 +352,7 @@ function Process:Decompile(Script: LocalScript | ModuleScript): string
     local KonstantAPI = "http://api.plusgiant5.com/konstant/decompile"
     local ForceKonstant = Config.ForceKonstantDecompiler
 
-    --// Use built-in decompiler if the executor supports it
+    --// 如果执行器支持，使用内置反编译器
     if decompile and not ForceKonstant then 
         return decompile(Script)
     end
@@ -360,12 +360,12 @@ function Process:Decompile(Script: LocalScript | ModuleScript): string
     --// getscriptbytecode
     local Success, Bytecode = pcall(getscriptbytecode, Script)
     if not Success then
-        local Error = `--Failed to get script bytecode, error:\n`
+        local Error = `--获取脚本字节码失败，错误:\n`
         Error ..= `\n--[[\n{Bytecode}\n]]`
         return Error, true
     end
     
-    --// Send POST request to the API
+    --// 发送 POST 请求到 API
     local Responce = request({
         Url = KonstantAPI,
         Body = Bytecode,
@@ -375,9 +375,9 @@ function Process:Decompile(Script: LocalScript | ModuleScript): string
         },
     })
 
-    --// Error check
+    --// 错误检查
     if Responce.StatusCode ~= 200 then
-        local Error = `--[KONSTANT] Error occured while requesting the API, error:\n`
+        local Error = `--[KONSTANT] 请求 API 时出错，错误:\n`
         Error ..= `\n--[[\n{Responce.Body}\n]]`
         return Error, true
     end
@@ -391,7 +391,7 @@ function Process:GetScriptFromFunc(Func: (...any) -> ...any)
     local Success, ENV = pcall(getfenv, Func)
     if not Success then return end
     
-    --// Blacklist sigma spy
+    --// 黑名单 sigma spy
     if self:IsSigmaSpyENV(ENV) then return end
 
     return rawget(ENV, "script")
@@ -407,7 +407,7 @@ function Process:ConnectionIsValid(Connection: table): boolean
 		end
 	}
 
-    --// Check if these properties are valid
+    --// 检查这些属性是否有效
     local ToCheck = {
         "Script"
     }
@@ -415,12 +415,12 @@ function Process:ConnectionIsValid(Connection: table): boolean
         local Replacement = ValueReplacements[Property]
         local Value
 
-        --// Check if there's a function for a property
+        --// 检查是否有替代函数
         if Replacement then
             Value = Replacement(Connection)
         end
 
-        --// Check if the property has a value
+        --// 检查属性是否有值
         if Value == nil then 
             return false 
         end
@@ -432,7 +432,7 @@ end
 function Process:FilterConnections(Signal: RBXScriptSignal): table
     local Processed = {}
 
-    --// Filter each connection
+    --// 过滤每个连接
     for _, Connection in getconnections(Signal) do
         if not self:ConnectionIsValid(Connection) then continue end
         table.insert(Processed, Connection)
@@ -448,11 +448,11 @@ end
 function Process:GetRemoteData(Id: string)
     local RemoteOptions = self.RemoteOptions
 
-    --// Check for existing remote data
+    --// 检查是否存在已保存的远程数据
 	local Existing = RemoteOptions[Id]
 	if Existing then return Existing end
 	
-    --// Base remote data
+    --// 基础远程数据
 	local Data = {
 		Excluded = false,
 		Blocked = false
@@ -485,38 +485,38 @@ function Process:PromptDiscordInvite(InviteCode: string)
 end
 
 local ProcessCallback = newcclosure(function(Data: RemoteData, Remote, ...): table?
-    --// Unpack Data
+    --// 解包 Data
     local OriginalFunc = Data.OriginalFunc
     local Id = Data.Id
     local Method = Data.Method
 
-    --// Check if the Remote is Blocked
+    --// 检查远程是否被阻止
     local RemoteData = Process:GetRemoteData(Id)
     if RemoteData.Blocked then return {} end
 
-    --// Check for a spoof
+    --// 检查是否有伪造返回
     local Spoof = Process:GetRemoteSpoof(Remote, Method, OriginalFunc, ...)
     if Spoof then return Spoof end
 
-    --// Check if the orignal function was passed
+    --// 检查是否有原始函数
     if not OriginalFunc then return end
 
-    --// Invoke orignal function
+    --// 调用原始函数
     return {
         OriginalFunc(Remote, ...)
     }
 end)
 
 function Process:ProcessRemote(Data: RemoteData, Remote, ...): table?
-    --// Unpack Data
+    --// 解包 Data
 	local Method = Data.Method
     local TransferType = Data.TransferType
     local IsReceive = Data.IsReceive
 
-	--// Check if the transfertype method is allowed
+	--// 检查传输类型方法是否允许
 	if TransferType and not self:RemoteAllowed(Remote, TransferType, Method) then return end
 
-    --// Fetch details
+    --// 获取详情
     local Id = Communication:GetDebugId(Remote)
     local ClassData = self:GetClassData(Remote)
     local Timestamp = tick()
@@ -524,19 +524,19 @@ function Process:ProcessRemote(Data: RemoteData, Remote, ...): table?
     local CallingFunction
     local SourceScript
 
-    --// Add extra data into the log if needed
+    --// 如果需要，将额外数据加入日志
     local ExtraData = self.ExtraData
     if ExtraData then
         self:Merge(Data, ExtraData)
     end
 
-    --// Get caller information
+    --// 获取调用者信息
     if not IsReceive then
         CallingFunction = self:FindCallingLClosure(6)
         SourceScript = CallingFunction and self:GetScriptFromFunc(CallingFunction) or nil
     end
 
-    --// Add to queue
+    --// 添加到队列
     self:Merge(Data, {
         Remote = cloneref(Remote),
 		CallingScript = getcallingscript(),
@@ -548,11 +548,11 @@ function Process:ProcessRemote(Data: RemoteData, Remote, ...): table?
         Args = {...}
     })
 
-    --// Invoke the Remote and log return values
+    --// 调用远程并记录返回值
     local ReturnValues = ProcessCallback(Data, Remote, ...)
     Data.ReturnValues = ReturnValues
 
-    --// Queue log
+    --// 队列日志
     Communication:QueueLog(Data)
 
     return ReturnValues
@@ -565,8 +565,8 @@ function Process:SetAllRemoteData(Key: string, Value)
 	end
 end
 
---// The communication creates a different table address
---// Recived tables will not be the same
+--// 通信会创建不同的表地址
+--// 接收到的表不会相同
 function Process:SetRemoteData(Id: string, RemoteData: table)
     local RemoteOptions = self.RemoteOptions
     RemoteOptions[Id] = RemoteData
