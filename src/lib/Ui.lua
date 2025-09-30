@@ -402,7 +402,7 @@ function Ui:DisplayAura() -- 显示AURA
     local AURADELAY = Rand:NextInteger(1, 5) -- 随机延迟
 
 	--// 标题
-	local Title = `Sigma Spy | AURA: {AURA}` -- 标题模板
+	local Title = `Sigma Spy --汉化版 | AURA: {AURA}` -- 标题模板
 	local Seasonal = self:TurnSeasonal(Title) -- 添加季节装饰
     Window:SetTitle(Seasonal) -- 设置窗口标题
 
@@ -587,7 +587,8 @@ function Ui:AddDetailsSection(OptionsTab) -- 添加详细信息部分
 		Rows = { -- 行列表
 			"Sigma spy - 由 depso 编写！",
 			"库: Roblox-Parser, Dear-ReGui",
-			"感谢 syn.lua 建议我制作这个工具"
+			"感谢 syn.lua 建议我制作这个工具",
+			"汉化：wynsbssb"
 		}
 	})
 end
